@@ -1,42 +1,59 @@
-# 🛣️ RoadScan-MA
+@"
+# RoadScan-MA
 
-> Détection automatique des dégradations routières avec cartographie GPS pour les municipalités marocaines
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-purple)
+![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-red?logo=streamlit)
+![License](https://img.shields.io/badge/License-MIT-green)
+![ENSAM](https://img.shields.io/badge/ENSAM-Meknes_IATD_2026-orange)
 
-## Lancement rapide
+Detection automatique des degradations routieres avec cartographie GPS pour les municipalites marocaines.
 
-```bash
-# 1. Installer les dépendances
+Projet IATD - ENSAM Meknes 2026
+"@ | Out-File -FilePath README.md -Encoding utf8
+@"
+
+## Architecture
+
+![Pipeline RoadScan-MA](pipeline_complet_roadscan.svg)
+
+## Resultats
+
+| Modele | mAP50 | Classes | Dataset |
+|--------|-------|---------|---------|
+| teacher_new_best.pt | 0.740 | 2 (cracks) | D1+D2 |
+| yolo_final/best.pt | 0.344 | 5 classes | D1+D2+D4+BG |
+| Classificateur cracks | 95% accuracy | linear vs alligator | D1+D2 |
+
+## Classes detectees
+
+| ID | Classe |
+|----|--------|
+| 0 | linear_crack |
+| 1 | alligator_crack |
+| 2 | minor_pothole |
+| 3 | medium_pothole |
+| 4 | major_pothole |
+
+## Dataset
+
+- 5831 images annotees format YOLO
+- Train: 4663 | Val: 581 | Test: 587
+- Sources: RDD2022 India + lorenzoarcioni + D4 severity + background
+- Nettoyage: confident learning (3 modeles)
+
+## Installation
+
 pip install -r requirements.txt
-
-# 2. Placer le modèle YOLO
-cp best.pt models/
-
-# 3. Lancer l'application
 streamlit run app.py
-```
 
-L'app sera disponible sur **http://localhost:8501**
+## Stack
 
-## Classes détectées
+Python - YOLOv8 - Streamlit - Folium - OpenCV - ReportLab - GPX
+"@ | Add-Content -Path README.md -Encoding utf8
+@"
 
-| ID | Classe | Couleur |
-|----|--------|---------|
-| 0 | linear_crack | 🔵 Bleu |
-| 1 | alligator_crack | 🟫 Marron |
-| 2 | minor_pothole | 🟢 Vert |
-| 3 | medium_pothole | 🟠 Orange |
-| 4 | major_pothole | 🔴 Rouge |
+## Demo
 
-## Structure
-
-```
-RoadScan-MA/
-├── app.py              ← Dashboard Streamlit
-├── inference.py        ← Wrapper YOLOv8
-├── map_generator.py    ← Cartes Folium
-├── utils.py            ← Fonctions partagées
-├── models/best.pt      ← Modèle YOLO (à placer manuellement)
-├── assets/             ← Logo et ressources visuelles
-├── sample_data/        ← Images/vidéos de test pour démo
-└── .streamlit/         ← Configuration thème sombre
-```
+![Dashboard RoadScan-MA](assets/dashboard_demo.png)
+"@ | Add-Content -Path README.md -Encoding utf8
