@@ -1,4 +1,4 @@
-@"
+$readme = @'
 # RoadScan-MA
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
@@ -8,24 +8,21 @@
 ![ENSAM](https://img.shields.io/badge/ENSAM-Meknes_IATD_2026-orange)
 
 Detection automatique des degradations routieres avec cartographie GPS pour les municipalites marocaines.
-
 Projet IATD - ENSAM Meknes 2026
-"@ | Out-File -FilePath README.md -Encoding utf8
-@"
 
 ## Architecture
 
-![Pipeline RoadScan-MA](pipeline_complet_roadscan.svg)
+![Pipeline](pipeline_complet_roadscan.svg)
 
 ## Resultats
 
 | Modele | mAP50 | Classes | Dataset |
 |--------|-------|---------|---------|
-| teacher_new_best.pt | 0.740 | 2 (cracks) | D1+D2 |
+| teacher_new_best.pt | 0.740 | 2 cracks | D1+D2 |
 | yolo_final/best.pt | 0.344 | 5 classes | D1+D2+D4+BG |
 | Classificateur cracks | 95% accuracy | linear vs alligator | D1+D2 |
 
-## Classes detectees
+## Classes
 
 | ID | Classe |
 |----|--------|
@@ -37,10 +34,12 @@ Projet IATD - ENSAM Meknes 2026
 
 ## Dataset
 
-- 5831 images annotees format YOLO
+- 5831 images YOLO format
 - Train: 4663 | Val: 581 | Test: 587
 - Sources: RDD2022 India + lorenzoarcioni + D4 severity + background
-- Nettoyage: confident learning (3 modeles)
+- Nettoyage: confident learning 3 modeles
+
+## Installation
 
 ## Installation
 
@@ -50,8 +49,8 @@ streamlit run app.py
 ## Stack
 
 Python - YOLOv8 - Streamlit - Folium - OpenCV - ReportLab - GPX
-"@ | Add-Content -Path README.md -Encoding utf8
-@"
+'@
+$readme | Out-File -FilePath README.md -Encoding utf8
 
 ## Demo
 
