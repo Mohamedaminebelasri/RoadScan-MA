@@ -1,4 +1,3 @@
-$readme = @'
 # RoadScan-MA
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python)
@@ -18,8 +17,7 @@ Projet IATD - ENSAM Meknes 2026
 
 | Modele | mAP50 | Classes | Dataset |
 |--------|-------|---------|---------|
-| teacher_new_best.pt | 0.740 | 2 cracks | D1+D2 |
-| yolo_final/best.pt | 0.344 | 5 classes | D1+D2+D4+BG |
+| yolo_final/best.pt | 0.452 | 5 classes | D1+D2+D4+BG |
 | Classificateur cracks | 95% accuracy | linear vs alligator | D1+D2 |
 
 ## Classes
@@ -34,12 +32,15 @@ Projet IATD - ENSAM Meknes 2026
 
 ## Dataset
 
+Dataset complet annote YOLO :
+https://www.kaggle.com/datasets/mohamedaminebelasri7/roadscan-dataset/data
+
 - 5831 images YOLO format
 - Train: 4663 | Val: 581 | Test: 587
 - Sources: RDD2022 India + lorenzoarcioni + D4 severity + background
 - Nettoyage: confident learning 3 modeles
 
-## Installation
+Videos terrain Meknes (Video1 44min + Video2 8.5min) : disponibles sur demande via Google Drive
 
 ## Installation
 
@@ -49,25 +50,3 @@ streamlit run app.py
 ## Stack
 
 Python - YOLOv8 - Streamlit - Folium - OpenCV - ReportLab - GPX
-'@
-$readme | Out-File -FilePath README.md -Encoding utf8
-
-## Demo
-
-![Dashboard RoadScan-MA](assets/dashboard_demo.png)
-"@ | Add-Content -Path README.md -Encoding utf8
-## Dataset
-
-Disponible sur Kaggle :
-https://www.kaggle.com/datasets/mohamedaminebelasri7/roadscan-dataset/data
-
-- 5831 images format YOLO
-- Train: 4663 | Val: 581 | Test: 587
-- 5 classes annotees et nettoyees
-
-## Donnees
-
-Dataset complet annote YOLO :
-https://www.kaggle.com/datasets/mohamedaminebelasri7/roadscan-dataset/data
-
-Videos terrain Meknes (Video1 44min + Video2 8.5min) : disponibles sur demande via Google Drive
