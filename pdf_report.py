@@ -7,11 +7,12 @@ Contenu :
   - Bar chart des détections (matplotlib)
   - Tableau détaillé par classe
   - Photo annotée (optionnelle)
-  - Recommandations par priorité
+  - Recommandations (IA ou Classique)
   - Section validation officielle
 """
 
 import io
+import re  # <--- AJOUT POUR LIRE LE MARKDOWN DE L'IA
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -116,14 +117,10 @@ def _make_cover(styles, summary, zone):
     total  = summary.get("total", 0)
     date_s = datetime.now().strftime("%d %B %Y")
 
-    # Espace haut
     elements.append(Spacer(1, 4.5*cm))
-
-    # Bande rouge haute
     elements.append(ColorBand(1.2*cm, C_PRIMARY))
     elements.append(Spacer(1, 0.8*cm))
 
-    # Titre principal
     cover_title = ParagraphStyle("CoverTitle", parent=styles["Normal"],
         fontSize=32, textColor=C_DARK, alignment=TA_CENTER,
         fontName="Helvetica-Bold", spaceAfter=4)
@@ -138,7 +135,6 @@ def _make_cover(styles, summary, zone):
     elements.append(ColorBand(1.2*cm, C_DARK))
     elements.append(Spacer(1, 1.5*cm))
 
-    # Métriques clés — 3 cases colorées
     metric_data = [[
         Paragraph(f"<b><font size='24' color='#E74C3C'>{total}</font></b><br/>"
                   f"<font size='10' color='#666'>Dégradations<br/>détectées</font>",
@@ -161,7 +157,6 @@ def _make_cover(styles, summary, zone):
     elements.append(metric_table)
     elements.append(Spacer(1, 1.5*cm))
 
-    # Infos zone + date
     info_style = ParagraphStyle("Info", parent=styles["Normal"],
         fontSize=11, alignment=TA_CENTER, textColor=C_DARKGRAY, spaceAfter=6)
     elements.append(Paragraph(f"<b>Zone inspectée :</b> {zone}", info_style))
@@ -169,7 +164,6 @@ def _make_cover(styles, summary, zone):
     elements.append(Paragraph(f"<b>Niveau de sévérité :</b> {emoji} {label}", info_style))
     elements.append(Spacer(1, 2*cm))
 
-    # Bas de couverture
     elements.append(ColorBand(0.4*cm, C_PRIMARY))
     elements.append(Spacer(1, 0.3*cm))
     footer_style = ParagraphStyle("CoverFooter", parent=styles["Normal"],
@@ -181,7 +175,6 @@ def _make_cover(styles, summary, zone):
 
 # ── Bar chart matplotlib ───────────────────────────────────
 def _make_bar_chart(summary) -> Image:
-    """Crée un bar chart et retourne une Image ReportLab."""
     counts  = summary.get("counts", {})
     labels  = [CLASS_LABELS_FR[k] for k in counts]
     values  = list(counts.values())
@@ -193,7 +186,6 @@ def _make_bar_chart(summary) -> Image:
 
     bars = ax.bar(labels, values, color=colors_, width=0.55, edgecolor="white", linewidth=1.2)
 
-    # Valeurs au-dessus des barres
     for bar, val in zip(bars, values):
         if val > 0:
             ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.15,
@@ -249,7 +241,6 @@ def _make_class_table(summary):
 
 # ── Section photo ──────────────────────────────────────────
 def _make_photo_section(styles, image_path):
-    """Intègre la photo annotée dans le PDF."""
     elements = []
     elements.append(_section_title(styles, "3. Exemple de Détection"))
     try:
@@ -264,7 +255,40 @@ def _make_photo_section(styles, image_path):
     return elements
 
 
-# ── Recommandations ────────────────────────────────────────
+# ── NOUVEAU : Parseur RAG (Convertit le Markdown IA en PDF) ──
+def _parse_markdown_to_flowables(text, styles):
+    """Traduit le texte brut de l'IA en paragraphes stylisés ReportLab."""
+    elements = []
+    
+    # Styles personnalisés pour le RAG
+    rag_normal = ParagraphStyle("RAG_Normal", parent=styles["Normal"], fontSize=9, spaceAfter=6, leading=13)
+    rag_h2 = ParagraphStyle("RAG_H2", parent=styles["Normal"], fontSize=11, textColor=C_PRIMARY, fontName="Helvetica-Bold", spaceBefore=10, spaceAfter=4)
+
+    for line in text.split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+            
+        # 1. Gestion des titres (##)
+        if line.startswith('## ') or line.startswith('# '):
+            clean_text = line.replace('## ', '').replace('# ', '').replace('**', '')
+            elements.append(Paragraph(clean_text, rag_h2))
+            
+        # 2. Gestion des listes et du gras
+        else:
+            # Remplacer **texte** par <b>texte</b>
+            line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
+            
+            # Puces
+            if line.startswith('- ') or line.startswith('* '):
+                line = "&nbsp;&nbsp;• " + line[2:]
+                
+            elements.append(Paragraph(line, rag_normal))
+            
+    return elements
+
+
+# ── Recommandations (Classique de secours) ─────────────────
 def _make_recommendations(styles, summary):
     index  = summary.get("severity_index", 0)
     counts = summary.get("counts", {})
@@ -301,8 +325,7 @@ def _make_recommendations(styles, summary):
     rows = []
     for icon, text, color in actions:
         style = ParagraphStyle("Rec", parent=styles["Normal"], fontSize=9,
-                               textColor=colors.HexColor(color.hexval()
-                               if hasattr(color, "hexval") else "#333333"))
+                               textColor=colors.HexColor(color.hexval() if hasattr(color, "hexval") else "#333333"))
         rows.append([Paragraph(f"{icon}  {text}", style)])
 
     t = Table(rows, colWidths=[17*cm])
@@ -344,13 +367,14 @@ def _section_title(styles, title):
 
 
 # ── Fonction principale ────────────────────────────────────
+# 🔴 AJOUT DU PARAMÈTRE rapport_ia
 def generate_report(summary: dict, output_path: str = "rapport_roadscan.pdf",
                     zone: str = "Meknès — Routes inspectées",
-                    image_path: str = None) -> str:
+                    image_path: str = None,
+                    rapport_ia: str = None) -> str:
 
     styles = getSampleStyleSheet()
 
-    # Frames : couverture (pleine page) + contenu (avec marges header/footer)
     cover_frame   = Frame(0, 0, W, H, leftPadding=2*cm, rightPadding=2*cm,
                           topPadding=0, bottomPadding=0)
     content_frame = Frame(2*cm, 1.2*cm, W-4*cm, H-2.8*cm,
@@ -371,7 +395,6 @@ def generate_report(summary: dict, output_path: str = "rapport_roadscan.pdf",
     # ── Page 1 : Couverture ────────────────────────────────
     story += _make_cover(styles, summary, zone)
 
-    # Basculer sur template content
     from reportlab.platypus import NextPageTemplate
     story.append(NextPageTemplate("content"))
 
@@ -418,8 +441,15 @@ def generate_report(summary: dict, output_path: str = "rapport_roadscan.pdf",
 
     # ── Recommandations ────────────────────────────────────
     num = "4" if image_path else "3"
-    story.append(_section_title(styles, f"{num}. Recommandations"))
-    story.append(_make_recommendations(styles, summary))
+    
+    # 🔴 INTEGRATION DU RAPPORT IA ICI
+    if rapport_ia:
+        story.append(_section_title(styles, f"{num}. Recommandations d'Expertise (IA RAG)"))
+        story += _parse_markdown_to_flowables(rapport_ia, styles)
+    else:
+        story.append(_section_title(styles, f"{num}. Recommandations"))
+        story.append(_make_recommendations(styles, summary))
+        
     story.append(Spacer(1, 0.6*cm))
 
     # ── Validation ─────────────────────────────────────────
@@ -447,13 +477,23 @@ if __name__ == "__main__":
     ]
 
     summary = format_summary(fake)
+    
+    # Simuler un rapport IA
+    faux_rapport_ia = """
+## 🔍 Diagnostic
+Le tronçon présente une fatigue structurelle avec des nids-de-poule majeurs nécessitant une action rapide.
+## ⚠️ Niveau d'urgence
+**CRITIQUE**. Les fondations sont exposées.
+## 🔧 Interventions
+- **Nid-de-poule majeur** : Purge et compactage à chaud.
+- **Fissure linéaire** : Pontage au mastic.
+    """
+    
     path    = generate_report(
         summary,
         output_path="test_rapport_pro.pdf",
-        zone="Meknès — Avenue des FAR"
+        zone="Meknès — Avenue des FAR",
+        rapport_ia=faux_rapport_ia
     )
     print(f"✅ Rapport généré : {path}")
-    print(f"   Pages         : couverture + contenu")
-    print(f"   Sévérité      : {summary['severity_index']}/100")
-    print("   Ouvre test_rapport_pro.pdf !")
-    print("=== Fichier OK ===")
+    print(" === Fichier OK ===")

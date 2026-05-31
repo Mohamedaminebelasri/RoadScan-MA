@@ -1,0 +1,30 @@
+GUIDE TECHNIQUE DE MAINTENANCE ROUTIÈRE - ROYAUME DU MAROC
+Direction des Routes et de la Circulation Routière (DRCR)
+Référence: Décret 2-57-1516 relatif à l'entretien du domaine public routier.
+
+1. CLASSIFICATION DES DÉGRADATIONS ET SÉVÉRITÉ
+- linear_crack (Fissure linéaire) : Sévérité 1. Fissure longitudinale ou transversale due à la fatigue de la chaussée ou aux variations thermiques.
+- minor_pothole (Nid-de-poule mineur) : Sévérité 2. Cavité de faible profondeur (< 3 cm) et de petite surface. Indique un début de désenrobage.
+- alligator_crack (Fissure en peau de crocodile) : Sévérité 3. Fissuration interconnectée (réseau) due à une fatigue structurelle avancée des couches de base.
+- medium_pothole (Nid-de-poule moyen) : Sévérité 4. Cavité moyenne (3 à 5 cm de profondeur). Danger modéré pour les véhicules légers.
+- major_pothole (Nid-de-poule majeur) : Sévérité 5. Cavité profonde (> 5 cm) exposant les fondations. Risque immédiat pour la sécurité routière et les pneumatiques.
+
+2. SEUILS D'INTERVENTION ET DÉLAIS (DRCR)
+- Sévérité 1 à 2 : Intervention planifiée sous 30 à 60 jours. Surveillance trimestrielle.
+- Sévérité 3 à 4 : Intervention prioritaire sous 15 jours. Risque d'infiltration d'eau majeur.
+- Sévérité 5 (CRITIQUE) : Mise en sécurité immédiate (balisage sous 24h), réparation définitive sous 72h.
+
+3. MÉTHODES DE TRAITEMENT RECOMMANDÉES
+- Fissures (linéaires) : Colmatage par pontage à chaud avec mastic bitumineux.
+- Fissures (alligator) : Purge partielle, décaissement de la couche de roulement et application d'un enduit superficiel ou d'enrobé à froid/chaud selon la surface.
+- Nids-de-poule (mineurs/moyens) : Nettoyage, application de couche d'accrochage, et rebouchage à l'enrobé à froid (réparation d'urgence) ou à chaud (pérenne).
+- Nids-de-poule (majeurs) : Purge complète au marteau-piqueur (carrée ou rectangulaire), compactage du fond, couche d'accrochage et enrobé à chaud compacté.
+
+4. ESTIMATIONS BUDGÉTAIRES (Prix moyens région de Meknès, en MAD)
+- Pontage de fissure : 25 à 40 MAD / mètre linéaire.
+- Point-à-temps (enrobé à froid pour nids-de-poule) : 150 à 250 MAD / unité.
+- Purge et enrobé à chaud (grandes surfaces/trous majeurs) : 300 à 450 MAD / m².
+- Frais de balisage d'urgence : 500 MAD / forfait d'intervention.
+
+5. INDICE DE CONDITION DE LA CHAUSSÉE (PCI Maroc)
+Le calcul de l'urgence est pondéré selon la densité des dégradations sur un tronçon donné. Un score de sévérité cumulé supérieur à 18 déclenche automatiquement une alerte rouge nécessitant une réfection structurelle, et non un simple entretien curatif. L'eau stagnante (climat hivernal à Meknès) accélère la dégradation de 40%.
