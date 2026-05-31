@@ -64,3 +64,10 @@ https://www.kaggle.com/datasets/mohamedaminebelasri7/roadscan-dataset/data
 - 5831 images format YOLO
 - Train: 4663 | Val: 581 | Test: 587
 - 5 classes annotees et nettoyees
+
+## Donnees
+
+Dataset complet annote YOLO :
+https://www.kaggle.com/datasets/mohamedaminebelasri7/roadscan-dataset/data
+
+Videos terrain Meknes (Video1 44min + Video2 8.5min) : disponibles sur demande via Google Drive
