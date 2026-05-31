@@ -140,7 +140,7 @@ def render_sidebar():
                 unsafe_allow_html=True,
             )
         st.divider()
-        st.caption("ENSAM Meknès — IATD | v1.0")
+        st.caption("ENSAM Meknès — IATD | Mohamed Amine Belasri & Yahya Amajane | v1.0")
     return mode, confidence
 
 

@@ -12,7 +12,7 @@
 
 **Détection automatique des dégradations routières avec cartographie GPS et recommandations IA**
 
-*Projet de fin d'études — Filière IATD — ENSAM Meknès 2026*
+*Projet académique IATD — Mohamed Amine Belasri & Yahya Amajane — ENSAM Meknès 2026*
 
 </div>
 
@@ -214,10 +214,10 @@ Documentation complète disponible sur ReadTheDocs :
 
 ---
 
-## 👤 Auteur
+## 👥 Auteurs
 
-**Mohamed Amine Belasri**
-Étudiant ingénieur — Filière IATD (Intelligence Artificielle et Technologies des Données)
+**Mohamed Amine Belasri** & **Yahya Amajane**
+Étudiants ingénieurs — Filière IATD (Intelligence Artificielle et Technologies des Données)
 ENSAM Meknès — Université Moulay Ismail — 2026
 
 ---

@@ -99,7 +99,7 @@ def _on_page(canvas, doc):
     canvas.rect(0, 0, W, 0.8*cm, fill=1, stroke=0)
     canvas.setFillColor(C_WHITE)
     canvas.setFont("Helvetica", 8)
-    canvas.drawString(2*cm, 0.25*cm, "ENSAM Meknès — IATD | RoadScan-MA v1.0")
+    canvas.drawString(2*cm, 0.25*cm, "ENSAM Meknès — IATD | Belasri M.A. & Amajane Y. | RoadScan-MA v1.0")
     canvas.drawRightString(W - 2*cm, 0.25*cm, f"Page {doc.page}")
 
     canvas.restoreState()

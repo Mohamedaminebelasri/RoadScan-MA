@@ -5,7 +5,7 @@
 ---
 
 !!! info "Projet académique"
-    Projet de fin d'études — Filière IATD (Intelligence Artificielle et Technologies des Données)
+    Projet académique IATD — Mohamed Amine Belasri & Yahya Amajane
     **ENSAM Meknès — 2026**
 
 ## Présentation
