@@ -17,7 +17,8 @@ from streamlit_folium import st_folium
 
 from inference import (load_model, predict_image, predict_video,
                        bgr_to_rgb, CLASS_LABELS_FR, CLASS_COLORS_HEX)
-from utils import (format_summary, generate_image_coords,
+from utils import (format_summary, extract_gps_exif, generate_image_coords,
+                   validate_image, validate_video, validate_gpx, sync_gpx_to_frames,
                    generate_video_coords, export_csv)
 from map_generator import generate_image_map, generate_video_map
 from pdf_report import generate_report
@@ -200,6 +201,12 @@ def show_plotly_chart(summary):
 #  CARTE FOLIUM
 # ══════════════════════════════════════════════════════════
 def show_map(detections, lat, lon, mode="image"):
+    # Vérification GPS
+    if mode == "image" and (lat is None or lon is None or (lat == 0.0 and lon == 0.0)):
+        st.info("📍 Aucune donnée GPS trouvée dans cette image. "
+                "La détection est disponible mais la localisation cartographique "
+                "n'est pas possible sans métadonnées GPS.")
+        return
     if not detections:
         st.info("📍 Aucune détection à afficher sur la carte.")
         return
@@ -326,6 +333,10 @@ def image_mode(model, confidence):
     if uploaded is None:
         st.info("👆 Charger une image pour lancer la détection.")
         return
+    ok, msg = validate_image(uploaded)
+    if not ok:
+        st.error(msg)
+        return
 
     file_bytes = np.asarray(bytearray(uploaded.read()), dtype=np.uint8)
     image_bgr  = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
@@ -337,7 +348,11 @@ def image_mode(model, confidence):
     with st.spinner("🔍 Détection en cours..."):
         detections, annotated_bgr = predict_image(model, image_bgr, confidence)
 
-    lat, lon = generate_image_coords()
+    uploaded.seek(0)
+    lat, lon = extract_gps_exif(uploaded)
+    gps_reel = lat is not None
+    if not gps_reel:
+        lat, lon = None, None
     for d in detections:
         d["lat"] = lat
         d["lon"] = lon
@@ -383,9 +398,22 @@ def video_mode(model, confidence):
         "Charger une vidéo (MP4 / MOV)",
         type=["mp4", "mov", "avi"],
     )
+    # Upload GPX optionnel
+    gpx_file = st.file_uploader(
+        "📍 Fichier GPX (optionnel) — pour la géolocalisation réelle",
+        type=["gpx"],
+        help="Enregistrez un tracé GPS avec une app comme GPSLogger pendant le tournage"
+    )
+
     if uploaded is None:
         st.info("👆 Charger une vidéo pour lancer l'analyse.")
         return
+    ok_v, msg_v = validate_video(uploaded)
+    if not ok_v:
+        st.error(msg_v)
+        return
+    elif msg_v:
+        st.warning(msg_v) if "⚠️" in msg_v else st.success(msg_v)
 
     if model is None:
         st.error("❌ Modèle non chargé — copier best.pt dans models/")
@@ -401,12 +429,18 @@ def video_mode(model, confidence):
     if not run:
         return
 
-    # Sauvegarder la vidéo dans un fichier temporaire
-    with tempfile.NamedTemporaryFile(
-        suffix=f".{uploaded.name.split('.')[-1]}", delete=False
-    ) as tmp_video:
-        tmp_video.write(uploaded.read())
-        video_path = tmp_video.name
+    # Sauvegarder la vidéo localement (fix Windows OpenCV)
+    import uuid, os
+    ext = uploaded.name.split(".")[-1]
+    video_path = os.path.abspath(f"temp_video_{uuid.uuid4().hex[:8]}.{ext}")
+    video_bytes = uploaded.read()
+    with open(video_path, "wb") as f:
+        f.write(video_bytes)
+    # Vérification fichier écrit
+    if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
+        st.error("❌ Erreur écriture fichier vidéo temporaire.")
+        return
+    st.write(f"📁 Vidéo sauvegardée : {os.path.getsize(video_path)//1024} KB")
 
     progress_bar = st.progress(0, text="⏳ Analyse en cours...")
     status_text  = st.empty()
@@ -428,11 +462,21 @@ def video_mode(model, confidence):
     status_text.empty()
     os.unlink(video_path)
 
-    # Ajouter coordonnées GPS à chaque détection
-    for det in all_detections:
-        lat, lon = generate_video_coords(det.get("frame", 0))
-        det["lat"] = lat
-        det["lon"] = lon
+    # GPS réel (GPX) ou simulé
+    ok_g, msg_g, n_pts = validate_gpx(gpx_file)
+    if not ok_g:
+        st.error(msg_g)
+        for det in all_detections:
+            det["lat"] = None
+            det["lon"] = None
+    elif gpx_file is not None and ok_g:
+        method = sync_gpx_to_frames(gpx_file, all_detections)
+        st.success(f"✅ GPX synchronisé ({n_pts} points, méthode : {method})")
+    else:
+        st.info("📍 Aucun fichier GPX — détections sans géolocalisation.")
+        for det in all_detections:
+            det["lat"] = None
+            det["lon"] = None
 
     summary = format_summary(all_detections)
 
@@ -449,7 +493,7 @@ def video_mode(model, confidence):
         # Tableau résumé
         counts = summary.get("counts", {})
         df = pd.DataFrame({
-            "Type": [CLASS_LABELS_FR[k] for k in counts],
+            "Type": [CLASS_LABELS_FR.get(k, k) for k in counts],
             "Détections": list(counts.values()),
         })
         st.dataframe(df, use_container_width=True, hide_index=True)
@@ -504,7 +548,11 @@ def demo_mode(model, confidence):
     with st.spinner("🔍 Détection en cours..."):
         detections, annotated_bgr = predict_image(model, image_bgr, confidence)
 
-    lat, lon = generate_image_coords()
+    uploaded.seek(0)
+    lat, lon = extract_gps_exif(uploaded)
+    gps_reel = lat is not None
+    if not gps_reel:
+        lat, lon = None, None
     for d in detections:
         d["lat"] = lat
         d["lon"] = lon

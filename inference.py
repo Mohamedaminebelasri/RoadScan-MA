@@ -147,35 +147,58 @@ def predict_video(
         all_detections (list) : toutes les détections avec numéro de frame
         summary (dict)        : statistiques globales
     """
+    # Tentative OpenCV (H.264)
     cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        raise ValueError(f"Impossible d'ouvrir la vidéo : {video_path}")
+    use_imageio = not cap.isOpened()
+    if not use_imageio:
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        cap.release()
 
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps          = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    # Fallback imageio (H.265 WhatsApp)
+    if use_imageio:
+        try:
+            import imageio.v3 as iio
+            reader = iio.imopen(video_path, "r", plugin="pyav")
+            meta = iio.improps(video_path, plugin="pyav")
+            total_frames = meta.n_images if hasattr(meta, "n_images") else 999
+            fps = 30.0
+        except Exception as e:
+            raise ValueError(f"Impossible d'ouvrir la vidéo : {video_path}\n"
+                             f"Installez : pip install imageio[ffmpeg]\nErreur: {e}")
 
     all_detections = []
-    frame_idx      = 0
+    frame_idx = 0
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        if frame_idx % frame_interval == 0:
-            detections, _ = predict_image(model, frame, confidence)
-
-            for det in detections:
-                det["frame"]       = frame_idx
-                det["timestamp_s"] = round(frame_idx / fps, 2)
-                all_detections.append(det)
-
-            if progress_callback:
-                progress_callback(frame_idx, total_frames)
-
-        frame_idx += 1
-
-    cap.release()
+    if use_imageio:
+        import imageio.v3 as iio
+        for frame_rgb in iio.imiter(video_path, plugin="pyav"):
+            frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
+            if frame_idx % frame_interval == 0:
+                detections, _ = predict_image(model, frame, confidence)
+                for det in detections:
+                    det["frame"] = frame_idx
+                    det["timestamp_s"] = round(frame_idx / fps, 2)
+                    all_detections.append(det)
+                if progress_callback:
+                    progress_callback(frame_idx, total_frames)
+            frame_idx += 1
+    else:
+        cap = cv2.VideoCapture(video_path)
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                break
+            if frame_idx % frame_interval == 0:
+                detections, _ = predict_image(model, frame, confidence)
+                for det in detections:
+                    det["frame"] = frame_idx
+                    det["timestamp_s"] = round(frame_idx / fps, 2)
+                    all_detections.append(det)
+                if progress_callback:
+                    progress_callback(frame_idx, total_frames)
+            frame_idx += 1
+        cap.release()
 
     summary = _compute_summary(all_detections)
     return all_detections, summary
