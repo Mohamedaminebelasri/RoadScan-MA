@@ -56,3 +56,11 @@ $readme | Out-File -FilePath README.md -Encoding utf8
 
 ![Dashboard RoadScan-MA](assets/dashboard_demo.png)
 "@ | Add-Content -Path README.md -Encoding utf8
+## Dataset
+
+Disponible sur Kaggle :
+https://www.kaggle.com/datasets/mohamedaminebelasri7/roadscan-dataset/data
+
+- 5831 images format YOLO
+- Train: 4663 | Val: 581 | Test: 587
+- 5 classes annotees et nettoyees
