@@ -74,7 +74,12 @@ def load_model(model_path: str = "models/yolo_final_best.pt") -> YOLO:
         )
     model = YOLO(str(path))
     return model
-
+def apply_clahe(img_bgr):
+    lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    lab_eq = cv2.merge([clahe.apply(l), a, b])
+    return cv2.cvtColor(lab_eq, cv2.COLOR_LAB2BGR)
 # ── Filtre Solaire (Calibré pour Meknès) ───────────────────
 def appliquer_filtre_solaire(image_bgr, contraste=0.80, luminosite=-20, gamma=0.80):
     """Réduit l'éblouissement pour aider YOLO à voir la route."""
@@ -90,20 +95,18 @@ def appliquer_filtre_solaire(image_bgr, contraste=0.80, luminosite=-20, gamma=0.
 def predict_image(model: YOLO, image: np.ndarray, confidence: float = 0.25):
     """
     Lance la détection YOLO sur une image NumPy (BGR).
-    
-    Retourne :
-        detections (list of dict) : liste des objets détectés
-        annotated_image (np.ndarray) : image avec bboxes dessinées
+    Applique CLAHE pour gérer la surexposition (soleil Meknes).
     """
-    image_filtree = appliquer_filtre_solaire(image)
+    image_processed = apply_clahe(image)
+
     results = model.predict(
-        source=image,
+        source=image_processed,
         conf=confidence,
         verbose=False,
     )[0]
 
     detections = []
-    annotated  = image_filtree.copy()
+    annotated  = image_processed.copy()
 
     if results.boxes is not None:
         for box in results.boxes:
@@ -112,16 +115,14 @@ def predict_image(model: YOLO, image: np.ndarray, confidence: float = 0.25):
             x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
 
             detection = {
-                "class_id":    cls_id,
-                "class_name":  CLASS_NAMES.get(cls_id, f"class_{cls_id}"),
-                "label_fr":    CLASS_LABELS_FR.get(cls_id, "Inconnu"),
-                "confidence":  round(conf_score, 3),
-                "bbox":        [x1, y1, x2, y2],
-                "color_hex":   CLASS_COLORS_HEX.get(cls_id, "#FFFFFF"),
+                "class_id":   cls_id,
+                "class_name": CLASS_NAMES.get(cls_id, f"class_{cls_id}"),
+                "label_fr":   CLASS_LABELS_FR.get(cls_id, "Inconnu"),
+                "confidence": round(conf_score, 3),
+                "bbox":       [x1, y1, x2, y2],
+                "color_hex":  CLASS_COLORS_HEX.get(cls_id, "#FFFFFF"),
             }
             detections.append(detection)
-
-            # Dessiner la bbox sur l'image
             annotated = _draw_bbox(annotated, detection)
 
     return detections, annotated
