@@ -50,3 +50,7 @@ streamlit run app.py
 ## Stack
 
 Python - YOLOv8 - Streamlit - Folium - OpenCV - ReportLab - GPX
+
+## Demo
+
+![Dashboard RoadScan-MA](assets/dashboard_demo.png)
