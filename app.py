@@ -21,7 +21,7 @@ from utils import (format_summary, generate_image_coords,
                    generate_video_coords, export_csv)
 from map_generator import generate_image_map, generate_video_map
 from pdf_report import generate_report
-
+from rag_advisor import load_knowledge_base, generate_recommendations, calculate_severity
 
 # ── Config page ────────────────────────────────────────────
 st.set_page_config(
@@ -95,7 +95,7 @@ def test_meknes_mode():
     # ── Tab 3 : Carte interactive ──────────────────────
     with t3:
         import streamlit.components.v1 as components
-        html_path = os.path.join(os.path.dirname(__file__), 'carte_interactive.html')
+        html_path = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
         if os.path.exists(html_path):
             with open(html_path, 'r', encoding='utf-8') as f:
                 # height=600 permet d'avoir une belle taille pour interagir
@@ -215,7 +215,7 @@ def show_map(detections, lat, lon, mode="image"):
 
     with tab2:
         import streamlit.components.v1 as components, os
-        html_path = os.path.join(os.path.dirname(__file__), 'carte_interactive.html')
+        html_path = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
         if os.path.exists(html_path):
             with open(html_path, 'r', encoding='utf-8') as f:
                 components.html(f.read(), height=550, scrolling=False)
@@ -224,11 +224,50 @@ def show_map(detections, lat, lon, mode="image"):
 # ══════════════════════════════════════════════════════════
 #  BOUTONS TÉLÉCHARGEMENT
 # ══════════════════════════════════════════════════════════
+# ══════════════════════════════════════════════════════════
+#  BOUTONS IA ET TÉLÉCHARGEMENT (Version Unifiée)
+# ══════════════════════════════════════════════════════════
 def show_downloads(detections, summary, zone="Meknès", annotated_img=None):
+    # --- 1. SECTION IA ---
+    st.divider()
+    st.markdown("### 🤖 Recommandations IA (Expertise DRCR)")
+
+    # Compter les détections pour l'IA
+    counts = {}
+    if detections:
+        for det in detections:
+            cls_name = det.get("class_name", "")
+            if cls_name:
+                counts[cls_name] = counts.get(cls_name, 0) + 1
+
+    # Affichage de la sévérité
+    severity_info = calculate_severity(counts)
+    st.markdown(f"**Indice de sévérité détecté :** <span style='color:{severity_info['color']}; font-size: 16px; font-weight: bold;'>{severity_info['score']} ({severity_info['level']})</span>", unsafe_allow_html=True)
+    
+    # 🔴 VOICI LE BOUTON IA !
+    if st.button("🧠 Générer les recommandations IA", use_container_width=True):
+        with st.spinner("Analyse experte en cours..."):
+            api_key = st.session_state.get("groq_api_key", "")
+            # Chargement sécurisé de la base de connaissances
+            chemin_kb = os.path.join(os.path.dirname(__file__), "knowledge_base", "road_maintenance_guide.txt")
+            kb_text = load_knowledge_base(chemin_kb)
+            
+            # Appel de l'IA et sauvegarde en mémoire
+            reco = generate_recommendations(counts, kb_text, api_key)
+            st.session_state["recommendations"] = reco
+
+    # Affichage du rapport si on vient de cliquer sur le bouton
+    if st.session_state.get("recommendations"):
+        st.success("✅ Rapport IA généré et prêt à être inclus dans le PDF.")
+        with st.expander("Voir le rapport IA généré", expanded=True):
+            st.markdown(st.session_state["recommendations"])
+
+    # --- 2. SECTION TÉLÉCHARGEMENTS ---
+    st.divider()
     st.markdown("### ⬇️ Téléchargements")
     col_a, col_b = st.columns(2)
 
-    # CSV
+    # Bouton CSV
     if detections:
         with col_a:
             df = pd.DataFrame([{
@@ -248,36 +287,33 @@ def show_downloads(detections, summary, zone="Meknès", annotated_img=None):
                 use_container_width=True,
             )
 
-    # PDF
+    # Bouton PDF
     with col_b:
-        if st.button("📄 Générer rapport PDF", use_container_width=True):
-            with st.spinner("Génération du PDF..."):
-                with tempfile.NamedTemporaryFile(
-                    suffix=".pdf", delete=False
-                ) as tmp:
+        # Étape 1 : Préparation
+        if st.button("📄 Préparer le rapport PDF", use_container_width=True):
+            with st.spinner("Génération du PDF en cours..."):
+                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
                     img_path = None
                     if annotated_img is not None:
-                        tmp_img = tempfile.NamedTemporaryFile(
-                            suffix=".jpg", delete=False
-                        )
-                        cv2.imwrite(tmp_img.name,
-                                    cv2.cvtColor(annotated_img,
-                                                 cv2.COLOR_RGB2BGR))
+                        tmp_img = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+                        cv2.imwrite(tmp_img.name, cv2.cvtColor(annotated_img, cv2.COLOR_RGB2BGR))
                         img_path = tmp_img.name
 
-                    generate_report(summary, tmp.name, zone, img_path)
+                    rapport_ia = st.session_state.get("recommendations", None)
+                    generate_report(summary, tmp.name, zone, img_path, rapport_ia)
+                    
                     with open(tmp.name, "rb") as f:
-                        pdf_bytes = f.read()
+                        st.session_state["pdf_bytes"] = f.read()
 
-                st.download_button(
-                    "⬇️ Télécharger le PDF",
-                    data=pdf_bytes,
-                    file_name="rapport_roadscan.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                )
-
-
+        # Étape 2 : Téléchargement final
+        if "pdf_bytes" in st.session_state:
+            st.download_button(
+                "⬇️ TÉLÉCHARGER LE PDF FINAL",
+                data=st.session_state["pdf_bytes"],
+                file_name="rapport_roadscan_expert.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
 # ══════════════════════════════════════════════════════════
 #  MODE IMAGE
 # ══════════════════════════════════════════════════════════
@@ -536,7 +572,7 @@ with st.expander("TEST GLOBAL 1 - MEKNES TERRAIN REEL", expanded=False):
     # ── Tab 3 : Carte interactive ──────────────────────
     with t3:
         import streamlit.components.v1 as components
-        html_path = os.path.join(os.path.dirname(__file__), 'carte_interactive.html')
+        html_path = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
         if os.path.exists(html_path):
             with open(html_path, 'r', encoding='utf-8') as f:
                 components.html(f.read(), height=560, scrolling=False)
