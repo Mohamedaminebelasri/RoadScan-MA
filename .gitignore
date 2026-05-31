@@ -1,5 +1,4 @@
-@"
-roadscan-env/
+﻿roadscan-env/
 __pycache__/
 *.pyc
 *.pt
@@ -12,4 +11,3 @@ test_map_v2.html
 test_rapport.pdf
 test_rapport_pro.pdf
 setup_dashboard.py
-"@ | Out-File -FilePath .gitignore -Encoding utf8
