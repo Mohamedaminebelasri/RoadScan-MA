@@ -1,0 +1,15 @@
+@"
+roadscan-env/
+__pycache__/
+*.pyc
+*.pt
+*.pth
+*.MOV
+*.mp4
+data/videos_brutes/
+test_map.html
+test_map_v2.html
+test_rapport.pdf
+test_rapport_pro.pdf
+setup_dashboard.py
+"@ | Out-File -FilePath .gitignore -Encoding utf8
