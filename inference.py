@@ -12,6 +12,7 @@ Wrapper YOLO pour la détection des 5 types de dégradations routières.
 
 from __future__ import annotations  # annotations lazy → YOLO n'a pas besoin d'être importé au niveau module
 
+import os
 import cv2
 import numpy as np
 from pathlib import Path
@@ -130,12 +131,27 @@ def predict_image(model: YOLO, image: np.ndarray, confidence: float = 0.25):
 
 
 # ── Inférence sur une vidéo ────────────────────────────────
+def _save_annotated_frame(annotated: np.ndarray, frame_idx: int,
+                           save_dir: str, detections: list) -> None:
+    """Redimensionne et sauvegarde la frame annotée ; stocke le chemin dans chaque détection."""
+    os.makedirs(save_dir, exist_ok=True)
+    h, w = annotated.shape[:2]
+    if w > 400:
+        new_w, new_h = 400, int(h * 400 / w)
+        annotated = cv2.resize(annotated, (new_w, new_h))
+    path = os.path.join(save_dir, f"frame_{frame_idx:06d}.jpg")
+    cv2.imwrite(path, annotated, [cv2.IMWRITE_JPEG_QUALITY, 72])
+    for det in detections:
+        det["annotated_frame_path"] = path
+
+
 def predict_video(
     model: YOLO,
     video_path: str,
     confidence: float = 0.25,
     frame_interval: int = 10,
     progress_callback=None,
+    save_frames_dir: str = None,
 ):
     """
     Traite une vidéo frame par frame.
@@ -176,7 +192,9 @@ def predict_video(
         for frame_rgb in iio.imiter(video_path, plugin="pyav"):
             frame = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
             if frame_idx % frame_interval == 0:
-                detections, _ = predict_image(model, frame, confidence)
+                detections, annotated = predict_image(model, frame, confidence)
+                if save_frames_dir and detections:
+                    _save_annotated_frame(annotated, frame_idx, save_frames_dir, detections)
                 for det in detections:
                     det["frame"] = frame_idx
                     det["timestamp_s"] = round(frame_idx / fps, 2)
@@ -191,7 +209,9 @@ def predict_video(
             if not ret:
                 break
             if frame_idx % frame_interval == 0:
-                detections, _ = predict_image(model, frame, confidence)
+                detections, annotated = predict_image(model, frame, confidence)
+                if save_frames_dir and detections:
+                    _save_annotated_frame(annotated, frame_idx, save_frames_dir, detections)
                 for det in detections:
                     det["frame"] = frame_idx
                     det["timestamp_s"] = round(frame_idx / fps, 2)

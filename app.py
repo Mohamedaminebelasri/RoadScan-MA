@@ -752,7 +752,10 @@ def video_mode(model, confidence):
         st.error(msg_v)
         return
     elif msg_v:
-        st.warning(msg_v) if "⚠️" in msg_v else st.success(msg_v)
+        if "⚠️" in msg_v:
+            st.warning(msg_v)
+        else:
+            st.success(msg_v)
 
     if model is None:
         st.error("❌ Modèle non chargé — copier best.pt dans models/")
@@ -765,48 +768,57 @@ def video_mode(model, confidence):
         st.markdown("&nbsp;")
         run = st.button("🚀 Lancer l'analyse", use_container_width=True)
 
+    import uuid, shutil
+
     if not run:
-        # Afficher résultats stockés si disponibles
+        # Restaurer les résultats en mémoire sans relancer l'analyse
         if st.session_state.get("video_all_detections") is not None:
             all_detections = st.session_state["video_all_detections"]
             video_summary  = st.session_state["video_summary_data"]
         else:
             return
+    else:
+        # Nettoyer l'ancien dossier de frames si une nouvelle analyse démarre
+        old_frames = st.session_state.get("video_frames_dir")
+        if old_frames and os.path.exists(old_frames):
+            shutil.rmtree(old_frames, ignore_errors=True)
 
-    # Sauvegarder la vidéo localement (fix Windows OpenCV)
-    import uuid, os
-    ext = uploaded.name.split(".")[-1]
-    video_path = os.path.abspath(f"temp_video_{uuid.uuid4().hex[:8]}.{ext}")
-    video_bytes = uploaded.read()
-    with open(video_path, "wb") as f:
-        f.write(video_bytes)
-    # Vérification fichier écrit
-    if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
-        st.error("❌ Erreur écriture fichier vidéo temporaire.")
-        return
-    st.write(f"📁 Vidéo sauvegardée : {os.path.getsize(video_path)//1024} KB")
+        frames_dir = os.path.abspath(f"roadscan_frames_{uuid.uuid4().hex[:8]}")
 
-    progress_bar = st.progress(0, text="⏳ Analyse en cours...")
-    status_text  = st.empty()
+        # Sauvegarder la vidéo localement (fix Windows OpenCV)
+        ext = uploaded.name.split(".")[-1]
+        video_path = os.path.abspath(f"temp_video_{uuid.uuid4().hex[:8]}.{ext}")
+        video_bytes = uploaded.read()
+        with open(video_path, "wb") as f:
+            f.write(video_bytes)
+        if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
+            st.error("❌ Erreur écriture fichier vidéo temporaire.")
+            return
 
-    def update_progress(current, total):
-        if total > 0:
-            pct = min(int(current / total * 100), 100)
-            progress_bar.progress(pct, text=f"⏳ Frame {current}/{total}")
-            status_text.text(f"Traitement : {pct}%")
+        progress_bar = st.progress(0, text="⏳ Analyse en cours...")
+        status_text  = st.empty()
 
-    with st.spinner("🎬 Traitement vidéo frame par frame..."):
-        all_detections, video_summary = predict_video(
-            model, video_path, confidence,
-            frame_interval=10,
-            progress_callback=update_progress,
-        )
+        def update_progress(current, total):
+            if total > 0:
+                pct = min(int(current / total * 100), 100)
+                progress_bar.progress(pct, text=f"⏳ Frame {current}/{total}")
+                status_text.text(f"Traitement : {pct}%")
 
-    progress_bar.progress(100, text="✅ Analyse terminée !")
-    st.session_state["video_all_detections"] = all_detections
-    st.session_state["video_summary_data"] = video_summary
-    status_text.empty()
-    os.unlink(video_path)
+        with st.spinner("🎬 Traitement vidéo frame par frame..."):
+            all_detections, video_summary = predict_video(
+                model, video_path, confidence,
+                frame_interval=10,
+                progress_callback=update_progress,
+                save_frames_dir=frames_dir,
+            )
+
+        progress_bar.progress(100, text="✅ Analyse terminée !")
+        status_text.empty()
+        os.unlink(video_path)
+
+        st.session_state["video_all_detections"] = all_detections
+        st.session_state["video_summary_data"]   = video_summary
+        st.session_state["video_frames_dir"]     = frames_dir
 
     # GPS réel (GPX) ou simulé
     ok_g, msg_g, n_pts = validate_gpx(gpx_file)
