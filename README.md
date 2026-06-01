@@ -3,6 +3,7 @@
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-streamlit.app-FF4B4B?logo=streamlit)](https://roadscan-ma.streamlit.app)
 ![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-orange?logo=pytorch)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.x-red?logo=streamlit)
 ![Groq](https://img.shields.io/badge/LLM-Llama--3.1-purple?logo=meta)
@@ -38,7 +39,12 @@ RoadScan-MA est un système complet de vision par ordinateur qui détecte automa
 | 🗺️ **Carte Folium GPS** | Marqueurs colorés par type et sévérité sur carte OpenStreetMap |
 | 🤖 **RAG + Recommandations IA** | Llama-3.1 via Groq API — rapport structuré pour la municipalité |
 | 📄 **Export PDF** | Rapport complet avec ReportLab — prêt à soumettre |
-| 📊 **Dashboard Streamlit** | Interface web — modes Image / Vidéo / Démo |
+| 📊 **Dashboard Streamlit** | Interface web — modes Image / Vidéo / TEST MEKNES |
+| 🛡️ **Validation fichiers** | Messages d'erreur clairs pour image, vidéo et GPX |
+| 📍 **GPS EXIF automatique** | Extraction coordonnées réelles depuis métadonnées |
+| 🗺️ **Synchro GPX timestamps** | Géolocalisation précise par interpolation temporelle |
+| 🔬 **CLAHE preprocessing** | Amélioration contraste automatique avant détection |
+| 🌐 **Déployé en ligne** | [roadscan-ma.streamlit.app](https://roadscan-ma.streamlit.app) |
 | 📈 **Indice de sévérité** | Score pondéré par classe — 5 niveaux d'urgence |
 
 ---
@@ -202,6 +208,12 @@ RoadScan-MA/
 Documentation complète disponible sur ReadTheDocs :
 
 👉 **[roadscan-ma.readthedocs.io](https://roadscan-ma.readthedocs.io)**
+
+---
+
+## 🌐 Démo en ligne
+
+> **Application déployée :** [roadscan-ma.streamlit.app](https://roadscan-ma.streamlit.app)
 
 ---
 
