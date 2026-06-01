@@ -35,14 +35,115 @@ st.set_page_config(
 # ── CSS custom ─────────────────────────────────────────────
 st.markdown("""
 <style>
-  [data-testid="stMetricValue"] { font-size: 1.8rem !important; }
-  [data-testid="stMetricLabel"] { font-size: 0.85rem !important; }
-  .block-container { padding-top: 1.2rem; }
-  .stProgress > div > div { background-color: #E74C3C; }
-  div[data-testid="stSidebarContent"] { background: #1A1D23; }
+  /* ── Fonts & Base ── */
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { font-family: 'Inter', sans-serif; }
+
+  /* ── Page layout ── */
+  .block-container { padding-top: 1rem; padding-bottom: 1rem; }
+  .main { background: #0E1117; }
+
+  /* ── Sidebar pro ── */
+  div[data-testid="stSidebarContent"] {
+    background: linear-gradient(180deg, #1A1D23 0%, #12151A 100%);
+    border-right: 1px solid #2D3139;
+  }
+
+  /* ── Métriques cards ── */
+  [data-testid="stMetricValue"] {
+    font-size: 2rem !important;
+    font-weight: 700 !important;
+    color: #FF6B35 !important;
+  }
+  [data-testid="stMetricLabel"] {
+    font-size: 0.8rem !important;
+    color: #8B92A5 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  [data-testid="metric-container"] {
+    background: linear-gradient(135deg, #1E2130 0%, #16192B 100%);
+    border: 1px solid #2D3139;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    transition: transform 0.2s ease;
+  }
+  [data-testid="metric-container"]:hover {
+    transform: translateY(-2px);
+    border-color: #FF6B35;
+  }
+
+  /* ── Boutons pro ── */
+  .stButton > button {
+    background: linear-gradient(135deg, #FF6B35, #E74C3C) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1.5rem !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3) !important;
+  }
+  .stButton > button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 8px 25px rgba(231, 76, 60, 0.5) !important;
+  }
+
+  /* ── Progress bar ── */
+  .stProgress > div > div {
+    background: linear-gradient(90deg, #FF6B35, #E74C3C) !important;
+    border-radius: 10px;
+  }
+
+  /* ── Tabs ── */
+  .stTabs [data-baseweb="tab"] {
+    background: transparent;
+    border-radius: 8px 8px 0 0;
+    color: #8B92A5;
+    font-weight: 500;
+  }
+  .stTabs [aria-selected="true"] {
+    background: linear-gradient(135deg, #1E2130, #16192B) !important;
+    color: #FF6B35 !important;
+    border-bottom: 2px solid #FF6B35 !important;
+  }
+
+  /* ── Expander ── */
+  .streamlit-expanderHeader {
+    background: #1E2130 !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+  }
+
+  /* ── Divider ── */
+  hr { border-color: #2D3139 !important; }
+
+  /* ── Severity badge ── */
   .severity-badge {
-    display: inline-block; padding: 4px 12px;
-    border-radius: 20px; font-weight: bold; font-size: 0.9rem;
+    display: inline-block;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* ── Info/Warning boxes ── */
+  [data-testid="stInfo"] {
+    background: rgba(255, 107, 53, 0.1) !important;
+    border-left: 3px solid #FF6B35 !important;
+    border-radius: 8px !important;
+  }
+  [data-testid="stSuccess"] {
+    border-radius: 8px !important;
+  }
+
+  /* ── Dataframe ── */
+  [data-testid="stDataFrame"] {
+    border-radius: 12px !important;
+    overflow: hidden;
   }
 </style>
 """, unsafe_allow_html=True)
