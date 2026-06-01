@@ -68,11 +68,11 @@ def test_meknes_mode():
     # ── Tab 1 : Video ──────────────────────────────────
     # ── Tab 1 : Video ──────────────────────────────────
     with t1:
-        video_path = os.path.join(os.path.dirname(__file__), 'Video2.MOV')
+        video_path = os.path.join(os.path.dirname(__file__), 'video_demo_meknes.mp4')
         if os.path.exists(video_path):
             st.video(video_path, muted=True) # <-- AJOUTE muted=True ICI
         else:
-            st.warning("⚠️ Place le fichier Video2.MOV dans le même dossier que app.py")
+            st.warning("⚠️ Place le fichier video_demo_meknes.mp4 dans le même dossier que app.py")
 
     # ── Tab 2 : Frames annotees ────────────────────────
     with t2:
@@ -427,7 +427,12 @@ def video_mode(model, confidence):
         run = st.button("🚀 Lancer l'analyse", use_container_width=True)
 
     if not run:
-        return
+        # Afficher résultats stockés si disponibles
+        if st.session_state.get("video_all_detections") is not None:
+            all_detections = st.session_state["video_all_detections"]
+            video_summary  = st.session_state["video_summary_data"]
+        else:
+            return
 
     # Sauvegarder la vidéo localement (fix Windows OpenCV)
     import uuid, os
@@ -459,6 +464,8 @@ def video_mode(model, confidence):
         )
 
     progress_bar.progress(100, text="✅ Analyse terminée !")
+    st.session_state["video_all_detections"] = all_detections
+    st.session_state["video_summary_data"] = video_summary
     status_text.empty()
     os.unlink(video_path)
 
@@ -594,11 +601,11 @@ with st.expander("TEST GLOBAL 1 - MEKNES TERRAIN REEL", expanded=False):
 
     # ── Tab 1 : Video ──────────────────────────────────
     with t1:
-        video_path = os.path.join(os.path.dirname(__file__), 'Video2.MOV')
+        video_path = os.path.join(os.path.dirname(__file__), 'video_demo_meknes.mp4')
         if os.path.exists(video_path):
             st.video(video_path)
         else:
-            st.info("Place Video2.MOV dans le dossier de app.py")
+            st.info("Place video_demo_meknes.mp4 dans le dossier de app.py")
 
     # ── Tab 2 : Frames annotees ────────────────────────
     with t2:
