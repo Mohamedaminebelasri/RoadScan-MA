@@ -9,7 +9,7 @@ Génération de cartes Folium interactives avec :
 """
 
 import folium
-from folium.plugins import MarkerCluster, HeatMap, MiniMap
+from folium.plugins import MarkerCluster, HeatMap, MiniMap, Fullscreen
 from inference import CLASS_COLORS_HEX, CLASS_LABELS_FR
 
 
@@ -50,6 +50,12 @@ def create_base_map(lat=MEKNES_LAT, lon=MEKNES_LON, zoom=14):
         name="⬜ Carte claire",
     ).add_to(m)
 
+    Fullscreen(
+        position="topright",
+        title="Plein écran",
+        title_cancel="Quitter",
+        force_separate_button=True,
+    ).add_to(m)
     return m
 
 
@@ -154,10 +160,18 @@ def generate_image_map(detections, lat, lon):
 
 
 def generate_video_map(detections):
-    """Carte complète pour le mode VIDÉO."""
+    """Carte complète pour le mode VIDEO."""
     m = create_base_map()
     m = _add_markers_group(m, detections, MEKNES_LAT, MEKNES_LON)
     m = _add_heatmap_group(m, detections, MEKNES_LAT, MEKNES_LON)
+    # Ligne de trajectoire GPS
+    coords = [(d.get("lat", MEKNES_LAT), d.get("lon", MEKNES_LON))
+              for d in detections if d.get("lat")]
+    if len(coords) > 1:
+        folium.PolyLine(
+            coords, color="#FF6B35", weight=2.5,
+            opacity=0.7, tooltip="Trajectoire parcourue"
+        ).add_to(m)
     m = _add_minimap(m)
     m = _add_legend(m)
     folium.LayerControl(collapsed=False).add_to(m)
@@ -172,14 +186,26 @@ def _make_popup(det, lat, lon):
     frame = det.get("frame", "—")
     ts    = det.get("timestamp_s", "—")
 
+    conf_pct = f"{conf:.0%}"
+    bar_width = int(conf * 100)
     return f"""
-    <div style="font-family:sans-serif;font-size:13px;min-width:180px;">
-      <b style="color:{color};font-size:14px;">● {label}</b><br><br>
-      <b>Confiance :</b> {conf:.0%}<br>
-      <b>Latitude  :</b> {lat:.6f}<br>
-      <b>Longitude :</b> {lon:.6f}<br>
-      {"<b>Frame :</b> " + str(frame) + "<br>" if frame != "—" else ""}
-      {"<b>Temps :</b> " + str(ts) + "s<br>" if ts != "—" else ""}
+    <div style="font-family:Inter,sans-serif;min-width:200px;
+                background:#1E2130;border-radius:10px;
+                padding:12px;color:#FAFAFA;border:1px solid #2D3139;">
+      <div style="display:flex;align-items:center;margin-bottom:8px;">
+        <span style="color:{color};font-size:18px;margin-right:6px;">●</span>
+        <b style="font-size:13px;color:{color};">{label}</b>
+      </div>
+      <div style="background:#2D3139;border-radius:4px;height:4px;margin-bottom:10px;">
+        <div style="background:{color};width:{bar_width}%;height:4px;border-radius:4px;"></div>
+      </div>
+      <table style="font-size:11px;color:#8B92A5;width:100%;">
+        <tr><td>Confiance</td><td style="color:#FAFAFA;text-align:right;"><b>{conf_pct}</b></td></tr>
+        <tr><td>Latitude</td><td style="color:#FAFAFA;text-align:right;">{lat:.5f}</td></tr>
+        <tr><td>Longitude</td><td style="color:#FAFAFA;text-align:right;">{lon:.5f}</td></tr>
+        {"<tr><td>Frame</td><td style='color:#FAFAFA;text-align:right;'>" + str(frame) + "</td></tr>" if frame != "—" else ""}
+        {"<tr><td>Temps</td><td style='color:#FAFAFA;text-align:right;'>" + str(ts) + "s</td></tr>" if ts != "—" else ""}
+      </table>
     </div>
     """
 
