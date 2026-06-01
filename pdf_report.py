@@ -72,6 +72,11 @@ class ColorBand(Flowable):
         self.band_color  = color
         self.width       = 17*cm
 
+    def wrap(self, aW, aH):
+        # Sans cette méthode, ReportLab suppose height=0 et la bande
+        # chevauche les éléments précédents en dessinant vers le haut.
+        return self.width, self.band_height
+
     def draw(self):
         self.canv.setFillColor(self.band_color)
         self.canv.rect(0, 0, self.width, self.band_height, fill=1, stroke=0)
@@ -89,7 +94,7 @@ def _on_page(canvas, doc):
     canvas.rect(0, H - 1.2*cm, W, 1.2*cm, fill=1, stroke=0)
     canvas.setFillColor(C_WHITE)
     canvas.setFont("Helvetica-Bold", 11)
-    canvas.drawString(2*cm, H - 0.85*cm, "  RoadScan-MA — Rapport d'Inspection Routière")
+    canvas.drawString(2*cm, H - 0.85*cm, " RoadScan-MA — Rapport d'Inspection Routière")
     canvas.setFont("Helvetica", 8)
     date_str = datetime.now().strftime("%d/%m/%Y")
     canvas.drawRightString(W - 2*cm, H - 0.85*cm, date_str)
@@ -99,8 +104,17 @@ def _on_page(canvas, doc):
     canvas.rect(0, 0, W, 0.8*cm, fill=1, stroke=0)
     canvas.setFillColor(C_WHITE)
     canvas.setFont("Helvetica", 8)
-    canvas.drawString(2*cm, 0.25*cm, "ENSAM Meknès — IATD | Belasri M.A. & Amajane Y. | RoadScan-MA v1.0")
+    canvas.drawString(2*cm, 0.25*cm, "ENSAM Meknès — IATD | Mohamed Amine Belasri & Yahya Amajane |RoadScan-MA v1.1")
     canvas.drawRightString(W - 2*cm, 0.25*cm, f"Page {doc.page}")
+
+    # Watermark diagonal
+    canvas.saveState()
+    canvas.setFont("Helvetica-Bold", 45)
+    canvas.setFillColorRGB(0.9, 0.9, 0.9, alpha=0.08)
+    canvas.translate(W/2, H/2)
+    canvas.rotate(45)
+    canvas.drawCentredString(0, 0, "RoadScan-MA")
+    canvas.restoreState()
 
     canvas.restoreState()
 
@@ -117,22 +131,22 @@ def _make_cover(styles, summary, zone):
     total  = summary.get("total", 0)
     date_s = datetime.now().strftime("%d %B %Y")
 
-    elements.append(Spacer(1, 4.5*cm))
-    elements.append(ColorBand(1.2*cm, C_PRIMARY))
-    elements.append(Spacer(1, 0.8*cm))
+    elements.append(Spacer(1, 3.5*cm))
+    elements.append(ColorBand(1.0*cm, C_PRIMARY))
+    elements.append(Spacer(1, 1.0*cm))
 
     cover_title = ParagraphStyle("CoverTitle", parent=styles["Normal"],
-        fontSize=32, textColor=C_DARK, alignment=TA_CENTER,
-        fontName="Helvetica-Bold", spaceAfter=4)
-    elements.append(Paragraph(" RoadScan-MA", cover_title))
+        fontSize=34, textColor=C_DARK, alignment=TA_CENTER,
+        fontName="Helvetica-Bold", spaceBefore=0, spaceAfter=8, leading=42)
+    elements.append(Paragraph("RoadScan-MA", cover_title))
 
     sub_style = ParagraphStyle("CoverSub", parent=styles["Normal"],
-        fontSize=15, textColor=C_GRAY, alignment=TA_CENTER,
-        fontName="Helvetica", spaceAfter=12)
+        fontSize=13, textColor=C_GRAY, alignment=TA_CENTER,
+        fontName="Helvetica", spaceBefore=0, spaceAfter=0)
     elements.append(Paragraph("Rapport d'Inspection Automatique des Routes", sub_style))
 
-    elements.append(Spacer(1, 0.3*cm))
-    elements.append(ColorBand(1.2*cm, C_DARK))
+    elements.append(Spacer(1, 1.0*cm))
+    elements.append(ColorBand(1.0*cm, C_DARK))
     elements.append(Spacer(1, 1.5*cm))
 
     metric_data = [[
@@ -164,11 +178,33 @@ def _make_cover(styles, summary, zone):
     elements.append(Paragraph(f"<b>Niveau de sévérité :</b> {emoji} {label}", info_style))
     elements.append(Spacer(1, 2*cm))
 
+    # QR Code demo live
+    try:
+        import qrcode
+        qr = qrcode.QRCode(version=1, box_size=4, border=2)
+        qr.add_data("https://roadscan-ma.streamlit.app")
+        qr.make(fit=True)
+        qr_img = qr.make_image(fill_color="#E74C3C", back_color="white")
+        qr_buf = io.BytesIO()
+        qr_img.save(qr_buf, format="PNG")
+        qr_buf.seek(0)
+        qr_data = [[
+            Image(qr_buf, width=2.5*cm, height=2.5*cm),
+            Paragraph("<b>Demo Live</b><br/><font size=8 color=#666>roadscan-ma.streamlit.app</font>",
+                ParagraphStyle("QR", parent=styles["Normal"], alignment=TA_LEFT, fontSize=9))
+        ]]
+        qr_table = Table(qr_data, colWidths=[3*cm, 8*cm])
+        qr_table.setStyle(TableStyle([("VALIGN",(0,0),(-1,-1),"MIDDLE"),("PADDING",(0,0),(-1,-1),4)]))
+        elements.append(qr_table)
+        elements.append(Spacer(1, 0.3*cm))
+    except Exception:
+        pass
+
     elements.append(ColorBand(0.4*cm, C_PRIMARY))
     elements.append(Spacer(1, 0.3*cm))
     footer_style = ParagraphStyle("CoverFooter", parent=styles["Normal"],
         fontSize=9, alignment=TA_CENTER, textColor=C_GRAY)
-    elements.append(Paragraph("ENSAM Meknès — IATD | Généré automatiquement par RoadScan-MA", footer_style))
+    elements.append(Paragraph("ENSAM Meknès — IATD | Mohamed Amine Belasri & Yahya Amajane |RoadScan-MA v1.1", footer_style))
     elements.append(PageBreak())
     return elements
 
@@ -217,7 +253,7 @@ def _make_class_table(summary):
         "alligator_crack": "Moyen terme",
         "minor_pothole": "Planifié",
         "medium_pothole": "Urgent",
-        "major_pothole": "🚨 Immédiat",
+        "major_pothole": " Immédiat",
     }
     for cls, label in CLASS_LABELS_FR.items():
         count   = counts.get(cls, 0)
@@ -249,7 +285,7 @@ def _make_photo_section(styles, image_path):
         elements.append(img)
         cap = ParagraphStyle("Cap", parent=styles["Normal"],
             fontSize=8, textColor=C_GRAY, alignment=TA_CENTER, spaceAfter=6)
-        elements.append(Paragraph("Image annotée par RoadScan-MA — bounding boxes colorées par type", cap))
+        elements.append(Paragraph("Image annotée parRoadScan-MA — bounding boxes colorées par type", cap))
     except Exception:
         pass
     return elements
@@ -296,30 +332,30 @@ def _make_recommendations(styles, summary):
     medium = counts.get("medium_pothole", 0)
 
     if index == 0:
-        actions = [("✅", "Aucune intervention requise.", C_GREEN)]
+        actions = [("", "Aucune intervention requise.", C_GREEN)]
     elif index < 30:
         actions = [
-            ("🔵", "Surveiller l'évolution des fissures.", C_BLUE),
-            ("🟢", "Traitement préventif dans les 6 mois.", C_GREEN),
+            ("", "Surveiller l'évolution des fissures.", C_BLUE),
+            ("", "Traitement préventif dans les 6 mois.", C_GREEN),
         ]
     elif index < 60:
         actions = [
-            ("🟡", f"Colmater les {medium} nids-de-poule moyens sous 2-3 mois.", C_ORANGE),
-            ("🔧", "Établir un plan de réparation par section.", C_BLUE),
-            ("📋", "Inspecter à nouveau dans 30 jours.", C_GRAY),
+            ("", f"Colmater les {medium} nids-de-poule moyens sous 2-3 mois.", C_ORANGE),
+            ("", "Établir un plan de réparation par section.", C_BLUE),
+            ("", "Inspecter à nouveau dans 30 jours.", C_GRAY),
         ]
     elif index < 80:
         actions = [
-            ("🟠", f"Traiter {major} nids-de-poule majeurs en urgence (< 30 jours).", C_ORANGE),
-            ("⚠️", "Signalisation temporaire sur les zones critiques.", C_RED),
-            ("📞", "Contacter le service technique municipal.", C_DARK),
+            ("", f"Traiter {major} nids-de-poule majeurs en urgence (< 30 jours).", C_ORANGE),
+            ("️", "Signalisation temporaire sur les zones critiques.", C_RED),
+            ("", "Contacter le service technique municipal.", C_DARK),
         ]
     else:
         actions = [
-            ("🔴", f"CRITIQUE — {major} nids-de-poule majeurs détectés.", C_RED),
-            ("🚧", "Fermeture partielle de la voie recommandée.", C_RED),
-            ("📞", "Intervention d'urgence municipale requise.", C_DARK),
-            ("📸", "Documenter et photographier chaque dégradation.", C_GRAY),
+            ("", f"CRITIQUE — {major} nids-de-poule majeurs détectés.", C_RED),
+            ("", "Fermeture partielle de la voie recommandée.", C_RED),
+            ("", "Intervention d'urgence municipale requise.", C_DARK),
+            ("", "Documenter et photographier chaque dégradation.", C_GRAY),
         ]
 
     rows = []
@@ -367,7 +403,7 @@ def _section_title(styles, title):
 
 
 # ── Fonction principale ────────────────────────────────────
-# 🔴 AJOUT DU PARAMÈTRE rapport_ia
+#  AJOUT DU PARAMÈTRE rapport_ia
 def generate_report(summary: dict, output_path: str = "rapport_roadscan.pdf",
                     zone: str = "Meknès — Routes inspectées",
                     image_path: str = None,
@@ -442,7 +478,7 @@ def generate_report(summary: dict, output_path: str = "rapport_roadscan.pdf",
     # ── Recommandations ────────────────────────────────────
     num = "4" if image_path else "3"
     
-    # 🔴 INTEGRATION DU RAPPORT IA ICI
+    #  INTEGRATION DU RAPPORT IA ICI
     if rapport_ia:
         story.append(_section_title(styles, f"{num}. Recommandations d'Expertise (IA RAG)"))
         story += _parse_markdown_to_flowables(rapport_ia, styles)
@@ -480,11 +516,11 @@ if __name__ == "__main__":
     
     # Simuler un rapport IA
     faux_rapport_ia = """
-## 🔍 Diagnostic
+##  Diagnostic
 Le tronçon présente une fatigue structurelle avec des nids-de-poule majeurs nécessitant une action rapide.
-## ⚠️ Niveau d'urgence
+## ️ Niveau d'urgence
 **CRITIQUE**. Les fondations sont exposées.
-## 🔧 Interventions
+##  Interventions
 - **Nid-de-poule majeur** : Purge et compactage à chaud.
 - **Fissure linéaire** : Pontage au mastic.
     """
@@ -495,5 +531,5 @@ Le tronçon présente une fatigue structurelle avec des nids-de-poule majeurs n�
         zone="Meknès — Avenue des FAR",
         rapport_ia=faux_rapport_ia
     )
-    print(f"✅ Rapport généré : {path}")
+    print(f" Rapport généré : {path}")
     print(" === Fichier OK ===")

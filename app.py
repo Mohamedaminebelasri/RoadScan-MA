@@ -21,7 +21,6 @@ from utils import (format_summary, extract_gps_exif, generate_image_coords,
                    validate_image, validate_video, validate_gpx, sync_gpx_to_frames,
                    generate_video_coords, export_csv)
 from map_generator import generate_image_map, generate_video_map
-from pdf_report import generate_report
 from rag_advisor import load_knowledge_base, generate_recommendations, calculate_severity
 
 # ── Config page ────────────────────────────────────────────
@@ -600,30 +599,39 @@ def show_downloads(detections, summary, zone="Meknès", annotated_img=None):
 
     # Bouton PDF
     with col_b:
-        # Étape 1 : Préparation
         if st.button("📄 Préparer le rapport PDF", use_container_width=True):
+            st.session_state.pop("pdf_bytes", None)
             with st.spinner("Génération du PDF en cours..."):
+                # Force le rechargement de pdf_report.py à chaque clic —
+                # contourne le cache sys.modules de Python.
+                import importlib
+                import pdf_report as _pdf_mod
+                importlib.reload(_pdf_mod)
+
+                img_path = None
+                if annotated_img is not None:
+                    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as tmp_img:
+                        tmp_img_path = tmp_img.name
+                    cv2.imwrite(tmp_img_path, cv2.cvtColor(annotated_img, cv2.COLOR_RGB2BGR))
+                    img_path = tmp_img_path
+
+                rapport_ia = st.session_state.get("recommendations", None)
+                # Ferme le fichier temporaire avant de passer le chemin à ReportLab
+                # (évite le verrouillage de fichier sur Windows).
                 with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                    img_path = None
-                    if annotated_img is not None:
-                        tmp_img = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
-                        cv2.imwrite(tmp_img.name, cv2.cvtColor(annotated_img, cv2.COLOR_RGB2BGR))
-                        img_path = tmp_img.name
+                    tmp_path = tmp.name
+                _pdf_mod.generate_report(summary, tmp_path, zone, img_path, rapport_ia)
+                with open(tmp_path, "rb") as f:
+                    st.session_state["pdf_bytes"] = f.read()
+                os.unlink(tmp_path)
 
-                    rapport_ia = st.session_state.get("recommendations", None)
-                    st.session_state.pop("pdf_bytes", None)
-                    generate_report(summary, tmp.name, zone, img_path, rapport_ia)
-                    
-                    with open(tmp.name, "rb") as f:
-                        st.session_state["pdf_bytes"] = f.read()
-
-        # Étape 2 : Téléchargement final
-    col_reset, col_dl = st.columns([1, 3])
-    with col_reset:
-        if st.button("🔄 Nouveau PDF"):
-            del st.session_state["pdf_bytes"]
-            st.rerun()
     if "pdf_bytes" in st.session_state:
+        col_reset, col_dl = st.columns([1, 3])
+        with col_reset:
+            if st.button("🔄 Nouveau PDF"):
+                st.session_state.pop("pdf_bytes", None)
+                st.rerun()
+        with col_dl:
             st.download_button(
                 "⬇️ TÉLÉCHARGER LE PDF FINAL",
                 data=st.session_state["pdf_bytes"],
