@@ -145,6 +145,22 @@ st.markdown("""
     border-radius: 12px !important;
     overflow: hidden;
   }
+
+  /* ── RAG Recommendation Cards ── */
+  .rag-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+  }
+  .rag-card:hover {
+    transform: translateX(5px);
+    box-shadow: 0 6px 24px rgba(0,0,0,0.4) !important;
+  }
+  .rag-severity-header {
+    transition: transform 0.2s ease;
+  }
+  .rag-severity-header:hover {
+    transform: translateY(-2px);
+  }
 </style>
 """, unsafe_allow_html=True)
 
@@ -367,8 +383,179 @@ def show_map(detections, lat, lon, mode="image"):
         else:
             st.warning("⚠️ Place carte_interactive.html dans le même dossier que app.py")
 # ══════════════════════════════════════════════════════════
-#  BOUTONS TÉLÉCHARGEMENT
+#  AFFICHAGE RECOMMANDATIONS RAG
 # ══════════════════════════════════════════════════════════
+
+_SECTION_CONFIG = {
+    "Diagnostic":                 {"icon": "🔍", "color": "#3498DB"},
+    "Niveau d'urgence":           {"icon": "⏱️", "color": "#E74C3C"},
+    "Interventions recommandees": {"icon": "🔧", "color": "#E67E22"},
+    "Interventions recommandées": {"icon": "🔧", "color": "#E67E22"},
+    "Calendrier d'intervention":  {"icon": "📅", "color": "#9B59B6"},
+    "Mesures preventives":        {"icon": "🛡️", "color": "#27AE60"},
+    "Mesures préventives":        {"icon": "🛡️", "color": "#27AE60"},
+    "Bilan":                      {"icon": "📋", "color": "#8B92A5"},
+}
+
+_SEVERITY_ICONS = {
+    "Aucune":   "✅",
+    "Faible":   "⚠️",
+    "Modere":   "🟠",
+    "Eleve":    "🔴",
+    "CRITIQUE": "🚨",
+}
+
+
+def _parse_sections(text):
+    """Découpe le markdown en dict {titre: contenu}."""
+    import re
+    text = re.sub(r'^\*\(Genere hors-ligne\)\*\s*\n?', '', text.strip())
+    parts = re.split(r'\n##\s+', '\n' + text)
+    sections = {}
+    for part in parts:
+        if not part.strip():
+            continue
+        lines = part.strip().split('\n', 1)
+        title = lines[0].strip().lstrip('#').strip()
+        content = lines[1].strip() if len(lines) > 1 else ""
+        if title:
+            sections[title] = content
+    return sections
+
+
+def _md_to_html(text):
+    """Convertit le markdown basique en HTML inline pour les cartes."""
+    import re
+    lines = text.split('\n')
+    result = []
+    in_list = False
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith(('- ', '* ')):
+            if not in_list:
+                result.append('<ul style="margin:0.4rem 0;padding-left:1.3rem;">')
+                in_list = True
+            item = stripped[2:]
+            item = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color:#FAFAFA;">\1</strong>', item)
+            result.append(f'<li style="margin-bottom:0.3rem;">{item}</li>')
+        else:
+            if in_list:
+                result.append('</ul>')
+                in_list = False
+            if stripped:
+                stripped = re.sub(r'\*\*(.+?)\*\*', r'<strong style="color:#FAFAFA;">\1</strong>', stripped)
+                result.append(f'<p style="margin:0.25rem 0;">{stripped}</p>')
+    if in_list:
+        result.append('</ul>')
+    return ''.join(result)
+
+
+def _render_recommendation_cards(text, sev_color):
+    """Affiche chaque section du rapport IA sous forme de carte colorée."""
+    st.markdown(
+        "<div style='display:flex;align-items:center;gap:0.6rem;margin:1.25rem 0 0.85rem;'>"
+        "<span style='font-size:1.2rem;'>📋</span>"
+        "<span style='color:#FAFAFA;font-size:1rem;font-weight:700;'>Rapport d'expertise IA</span>"
+        "<span style='background:#27AE60;color:#fff;font-size:0.65rem;font-weight:700;"
+        "padding:3px 10px;border-radius:20px;margin-left:0.5rem;letter-spacing:0.05em;'>✓ GÉNÉRÉ</span>"
+        "</div>",
+        unsafe_allow_html=True,
+    )
+    sections = _parse_sections(text)
+    if not sections:
+        st.markdown(text)
+        return
+
+    for raw_title, content in sections.items():
+        title_key = raw_title.split(':')[0].strip()
+        cfg = _SECTION_CONFIG.get(title_key, {"icon": "📌", "color": sev_color})
+        card_color = cfg["color"]
+        card_icon  = cfg["icon"]
+        html_content = _md_to_html(content) if content else "<em style='color:#8B92A5;'>—</em>"
+
+        st.markdown(f"""
+        <div class="rag-card" style="
+            background: linear-gradient(135deg, {card_color}18 0%, {card_color}06 100%);
+            border-left: 4px solid {card_color};
+            border-radius: 0 12px 12px 0;
+            padding: 1.1rem 1.5rem;
+            margin-bottom: 0.85rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        ">
+            <div style="display:flex;align-items:center;gap:0.65rem;margin-bottom:0.65rem;">
+                <span style="
+                    background:{card_color}28;border-radius:8px;
+                    padding:4px 9px;font-size:1.1rem;
+                ">{card_icon}</span>
+                <span style="
+                    color:{card_color};font-size:0.88rem;font-weight:700;
+                    text-transform:uppercase;letter-spacing:0.07em;
+                ">{raw_title}</span>
+            </div>
+            <div style="color:#C5CAD3;font-size:0.87rem;line-height:1.75;">
+                {html_content}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+
+def show_rag_recommendations(counts):
+    """Affiche la section IA avec design professionnel et cartes colorées par sévérité."""
+    severity_info = calculate_severity(counts)
+    sev_level   = severity_info.get("level", "Aucune")
+    sev_color   = severity_info.get("color", "#28a745")
+    sev_score   = severity_info.get("score", 0)
+    sev_urgency = severity_info.get("urgency", "")
+    sev_icon    = _SEVERITY_ICONS.get(sev_level, "⚠️")
+
+    # ── Carte de sévérité globale ───────────────────────────
+    st.markdown(f"""
+    <div class="rag-severity-header" style="
+        background: linear-gradient(135deg, {sev_color}22 0%, {sev_color}08 100%);
+        border: 2px solid {sev_color};
+        border-radius: 16px;
+        padding: 1.25rem 1.75rem;
+        margin-bottom: 1.1rem;
+        box-shadow: 0 4px 20px {sev_color}28;
+        display: flex; align-items: center; gap: 1.25rem;
+    ">
+        <div style="font-size:2.8rem;line-height:1;flex-shrink:0;">{sev_icon}</div>
+        <div style="flex:1;">
+            <div style="color:#8B92A5;font-size:0.7rem;text-transform:uppercase;
+                letter-spacing:0.12em;margin-bottom:0.2rem;">INDICE DE SÉVÉRITÉ</div>
+            <div style="display:flex;align-items:baseline;gap:0.8rem;flex-wrap:wrap;">
+                <span style="color:{sev_color};font-size:2.3rem;font-weight:800;line-height:1;">
+                    {sev_score}
+                </span>
+                <span style="
+                    background:{sev_color};color:#fff;
+                    font-size:0.72rem;font-weight:700;
+                    padding:3px 11px;border-radius:20px;
+                    text-transform:uppercase;letter-spacing:0.09em;
+                    align-self:center;
+                ">{sev_level}</span>
+            </div>
+            <div style="color:#8B92A5;font-size:0.82rem;margin-top:0.4rem;">
+                ⏱️ {sev_urgency}
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Bouton de génération ────────────────────────────────
+    if st.button("🧠 Générer les recommandations IA", use_container_width=True):
+        with st.spinner("Analyse experte en cours..."):
+            api_key   = st.session_state.get("groq_api_key", "")
+            chemin_kb = os.path.join(os.path.dirname(__file__), "knowledge_base", "road_maintenance_guide.txt")
+            kb_text   = load_knowledge_base(chemin_kb)
+            reco = generate_recommendations(counts, kb_text, api_key)
+            st.session_state["recommendations"] = reco
+
+    # ── Rendu des cartes ────────────────────────────────────
+    if st.session_state.get("recommendations"):
+        _render_recommendation_cards(st.session_state["recommendations"], sev_color)
+
+
 # ══════════════════════════════════════════════════════════
 #  BOUTONS IA ET TÉLÉCHARGEMENT (Version Unifiée)
 # ══════════════════════════════════════════════════════════
@@ -377,7 +564,6 @@ def show_downloads(detections, summary, zone="Meknès", annotated_img=None):
     st.divider()
     st.markdown("### 🤖 Recommandations IA (Expertise DRCR)")
 
-    # Compter les détections pour l'IA
     counts = {}
     if detections:
         for det in detections:
@@ -385,27 +571,7 @@ def show_downloads(detections, summary, zone="Meknès", annotated_img=None):
             if cls_name:
                 counts[cls_name] = counts.get(cls_name, 0) + 1
 
-    # Affichage de la sévérité
-    severity_info = calculate_severity(counts)
-    st.markdown(f"**Indice de sévérité détecté :** <span style='color:{severity_info['color']}; font-size: 16px; font-weight: bold;'>{severity_info['score']} ({severity_info['level']})</span>", unsafe_allow_html=True)
-    
-    # 🔴 VOICI LE BOUTON IA !
-    if st.button("🧠 Générer les recommandations IA", use_container_width=True):
-        with st.spinner("Analyse experte en cours..."):
-            api_key = st.session_state.get("groq_api_key", "")
-            # Chargement sécurisé de la base de connaissances
-            chemin_kb = os.path.join(os.path.dirname(__file__), "knowledge_base", "road_maintenance_guide.txt")
-            kb_text = load_knowledge_base(chemin_kb)
-            
-            # Appel de l'IA et sauvegarde en mémoire
-            reco = generate_recommendations(counts, kb_text, api_key)
-            st.session_state["recommendations"] = reco
-
-    # Affichage du rapport si on vient de cliquer sur le bouton
-    if st.session_state.get("recommendations"):
-        st.success("✅ Rapport IA généré et prêt à être inclus dans le PDF.")
-        with st.expander("Voir le rapport IA généré", expanded=True):
-            st.markdown(st.session_state["recommendations"])
+    show_rag_recommendations(counts)
 
     # --- 2. SECTION TÉLÉCHARGEMENTS ---
     st.divider()
@@ -445,13 +611,19 @@ def show_downloads(detections, summary, zone="Meknès", annotated_img=None):
                         img_path = tmp_img.name
 
                     rapport_ia = st.session_state.get("recommendations", None)
+                    st.session_state.pop("pdf_bytes", None)
                     generate_report(summary, tmp.name, zone, img_path, rapport_ia)
                     
                     with open(tmp.name, "rb") as f:
                         st.session_state["pdf_bytes"] = f.read()
 
         # Étape 2 : Téléchargement final
-        if "pdf_bytes" in st.session_state:
+    col_reset, col_dl = st.columns([1, 3])
+    with col_reset:
+        if st.button("🔄 Nouveau PDF"):
+            del st.session_state["pdf_bytes"]
+            st.rerun()
+    if "pdf_bytes" in st.session_state:
             st.download_button(
                 "⬇️ TÉLÉCHARGER LE PDF FINAL",
                 data=st.session_state["pdf_bytes"],
