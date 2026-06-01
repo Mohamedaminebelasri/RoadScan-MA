@@ -268,34 +268,71 @@ def show_metrics(summary):
 def show_plotly_chart(summary):
     counts = summary.get("counts", {})
     CLASS_NAME_TO_FR = {
-    "linear_crack":    "Fissure linéaire",
-    "alligator_crack": "Fissure alligator",
-    "minor_pothole":   "Nid-de-poule mineur",
-    "medium_pothole":  "Nid-de-poule moyen",
-    "major_pothole":   "Nid-de-poule majeur",
-}
-    labels = [CLASS_NAME_TO_FR.get(k, k) for k in counts]    
+        "linear_crack":    "Fissure lineaire",
+        "alligator_crack": "Fissure alligator",
+        "minor_pothole":   "Nid-de-poule mineur",
+        "medium_pothole":  "Nid-de-poule moyen",
+        "major_pothole":   "Nid-de-poule majeur",
+    }
+    labels = [CLASS_NAME_TO_FR.get(k, k) for k in counts]
     values = list(counts.values())
-    colors = [CLASS_COLORS_HEX[i] for i in range(len(counts))]
+    colors = ["#3498DB", "#E67E22", "#2ECC71", "#E74C3C", "#9B59B6"]
+    total  = sum(values)
 
-    fig = go.Figure(go.Bar(
-        x=labels, y=values,
-        marker_color=colors,
-        text=values,
-        textposition="outside",
-        hovertemplate="%{x}<br>%{y} détections<extra></extra>",
-    ))
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#FAFAFA"),
-        margin=dict(t=20, b=40, l=10, r=10),
-        height=260,
-        showlegend=False,
-        yaxis=dict(gridcolor="#333"),
-        xaxis=dict(tickangle=-20),
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    col1, col2 = st.columns([3, 2])
+
+    with col1:
+        fig_bar = go.Figure()
+        fig_bar.add_trace(go.Bar(
+            x=labels, y=values,
+            marker=dict(color=colors[:len(values)], opacity=0.9),
+            text=[f"{v} ({v/total*100:.0f}%)" if total > 0 else "0" for v in values],
+            textposition="outside",
+            textfont=dict(size=11, color="#FAFAFA"),
+            hovertemplate="<b>%{x}</b><br>Detections : %{y}<extra></extra>",
+        ))
+        fig_bar.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(14,17,23,0.5)",
+            font=dict(color="#FAFAFA"),
+            margin=dict(t=30, b=50, l=10, r=10),
+            height=280,
+            showlegend=False,
+            title=dict(text="Repartition par classe", font=dict(size=13, color="#8B92A5"), x=0),
+            yaxis=dict(gridcolor="rgba(255,255,255,0.05)", zeroline=False),
+            xaxis=dict(tickangle=-15, tickfont=dict(size=10)),
+            bargap=0.3,
+        )
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    with col2:
+        if total > 0:
+            active_labels = [l for l, v in zip(labels, values) if v > 0]
+            active_values = [v for v in values if v > 0]
+            active_colors = [c for c, v in zip(colors, values) if v > 0]
+            fig_pie = go.Figure(go.Pie(
+                labels=active_labels, values=active_values,
+                hole=0.6,
+                marker=dict(colors=active_colors, line=dict(color="#0E1117", width=2)),
+                textinfo="percent",
+                hovertemplate="<b>%{label}</b><br>%{value} det.<extra></extra>",
+            ))
+            fig_pie.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#FAFAFA"),
+                margin=dict(t=30, b=10, l=10, r=10),
+                height=280, showlegend=False,
+                title=dict(text="Distribution", font=dict(size=13, color="#8B92A5"), x=0.1),
+                annotations=[dict(
+                    text=f"<b>{total}</b><br>total",
+                    x=0.5, y=0.5,
+                    font=dict(size=14, color="#FF6B35"),
+                    showarrow=False
+                )]
+            )
+            st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            st.info("Aucune detection")
 
 
 # ══════════════════════════════════════════════════════════
