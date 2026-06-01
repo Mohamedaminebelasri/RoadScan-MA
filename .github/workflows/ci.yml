@@ -1,0 +1,33 @@
+name: RoadScan-MA CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.11"
+
+    - name: Verifier syntaxe Python
+      run: |
+        python -m py_compile app.py
+        python -m py_compile inference.py
+        python -m py_compile rag_advisor.py
+        python -m py_compile utils.py
+        python -m py_compile map_generator.py
+        python -m py_compile pdf_report.py
+        echo "Syntaxe OK"
+
+    - name: Verifier requirements.txt
+      run: |
+        pip install --dry-run -r requirements.txt
+        echo "Requirements OK"
