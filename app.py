@@ -12,8 +12,7 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly.graph_objects as go
-from PIL import Image
-from streamlit_folium import st_folium
+# PIL.Image et streamlit_folium sont importés en lazy dans les fonctions qui en ont besoin.
 
 from inference import (load_model, predict_image, predict_video,
                        bgr_to_rgb, CLASS_LABELS_FR, CLASS_COLORS_HEX)
@@ -168,9 +167,86 @@ st.markdown("""
 @st.cache_resource
 def load_model_cached():
     try:
-        return load_model("models/yolo_final_best.pt") # CHANGÉ ICI
+        return load_model("models/yolo_final_best.pt")
     except FileNotFoundError:
         return None
+
+
+# ── Cache : lecture de fichiers HTML (carte interactive) ──
+@st.cache_data(show_spinner=False)
+def _load_html_file(path: str) -> str:
+    """Lit un fichier HTML depuis le disque une seule fois par session."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return ""
+
+
+# ── Cache : construction des figures Plotly ───────────────
+@st.cache_data(show_spinner=False)
+def _build_plotly_figures(counts_tuple: tuple):
+    """Reconstruit les graphiques uniquement quand les comptages changent."""
+    _CLASS_NAME_TO_FR = {
+        "linear_crack":    "Fissure lineaire",
+        "alligator_crack": "Fissure alligator",
+        "minor_pothole":   "Nid-de-poule mineur",
+        "medium_pothole":  "Nid-de-poule moyen",
+        "major_pothole":   "Nid-de-poule majeur",
+    }
+    counts = dict(counts_tuple)
+    labels = [_CLASS_NAME_TO_FR.get(k, k) for k in counts]
+    values = list(counts.values())
+    colors = ["#3498DB", "#E67E22", "#2ECC71", "#E74C3C", "#9B59B6"]
+    total  = sum(values)
+
+    fig_bar = go.Figure()
+    fig_bar.add_trace(go.Bar(
+        x=labels, y=values,
+        marker=dict(color=colors[:len(values)], opacity=0.9),
+        text=[f"{v} ({v/total*100:.0f}%)" if total > 0 else "0" for v in values],
+        textposition="outside",
+        textfont=dict(size=11, color="#FAFAFA"),
+        hovertemplate="<b>%{x}</b><br>Detections : %{y}<extra></extra>",
+    ))
+    fig_bar.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(14,17,23,0.5)",
+        font=dict(color="#FAFAFA"),
+        margin=dict(t=30, b=50, l=10, r=10),
+        height=280, showlegend=False,
+        title=dict(text="Repartition par classe", font=dict(size=13, color="#8B92A5"), x=0),
+        yaxis=dict(gridcolor="rgba(255,255,255,0.05)", zeroline=False),
+        xaxis=dict(tickangle=-15, tickfont=dict(size=10)),
+        bargap=0.3,
+    )
+
+    fig_pie = None
+    if total > 0:
+        active_labels = [l for l, v in zip(labels, values) if v > 0]
+        active_values = [v for v in values if v > 0]
+        active_colors = [c for c, v in zip(colors, values) if v > 0]
+        fig_pie = go.Figure(go.Pie(
+            labels=active_labels, values=active_values,
+            hole=0.6,
+            marker=dict(colors=active_colors, line=dict(color="#0E1117", width=2)),
+            textinfo="percent",
+            hovertemplate="<b>%{label}</b><br>%{value} det.<extra></extra>",
+        ))
+        fig_pie.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#FAFAFA"),
+            margin=dict(t=30, b=10, l=10, r=10),
+            height=280, showlegend=False,
+            title=dict(text="Distribution", font=dict(size=13, color="#8B92A5"), x=0.1),
+            annotations=[dict(
+                text=f"<b>{total}</b><br>total",
+                x=0.5, y=0.5,
+                font=dict(size=14, color="#FF6B35"),
+                showarrow=False,
+            )],
+        )
+    return fig_bar, fig_pie, total
 # ══════════════════════════════════════════════════════════
 #  MODE TEST MEKNES (Défaut)
 # ══════════════════════════════════════════════════════════
@@ -213,10 +289,9 @@ def test_meknes_mode():
     with t3:
         import streamlit.components.v1 as components
         html_path = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
-        if os.path.exists(html_path):
-            with open(html_path, 'r', encoding='utf-8') as f:
-                # height=600 permet d'avoir une belle taille pour interagir
-                components.html(f.read(), height=600, scrolling=True) 
+        html_content = _load_html_file(html_path)
+        if html_content:
+            components.html(html_content, height=600, scrolling=True)
         else:
             st.warning("⚠️ Place carte_interactive.html dans le même dossier que app.py")
 # ══════════════════════════════════════════════════════════
@@ -281,70 +356,15 @@ def show_metrics(summary):
 #  GRAPHIQUE PLOTLY
 # ══════════════════════════════════════════════════════════
 def show_plotly_chart(summary):
-    counts = summary.get("counts", {})
-    CLASS_NAME_TO_FR = {
-        "linear_crack":    "Fissure lineaire",
-        "alligator_crack": "Fissure alligator",
-        "minor_pothole":   "Nid-de-poule mineur",
-        "medium_pothole":  "Nid-de-poule moyen",
-        "major_pothole":   "Nid-de-poule majeur",
-    }
-    labels = [CLASS_NAME_TO_FR.get(k, k) for k in counts]
-    values = list(counts.values())
-    colors = ["#3498DB", "#E67E22", "#2ECC71", "#E74C3C", "#9B59B6"]
-    total  = sum(values)
+    counts       = summary.get("counts", {})
+    counts_tuple = tuple(sorted(counts.items()))
+    fig_bar, fig_pie, total = _build_plotly_figures(counts_tuple)
 
     col1, col2 = st.columns([3, 2])
-
     with col1:
-        fig_bar = go.Figure()
-        fig_bar.add_trace(go.Bar(
-            x=labels, y=values,
-            marker=dict(color=colors[:len(values)], opacity=0.9),
-            text=[f"{v} ({v/total*100:.0f}%)" if total > 0 else "0" for v in values],
-            textposition="outside",
-            textfont=dict(size=11, color="#FAFAFA"),
-            hovertemplate="<b>%{x}</b><br>Detections : %{y}<extra></extra>",
-        ))
-        fig_bar.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(14,17,23,0.5)",
-            font=dict(color="#FAFAFA"),
-            margin=dict(t=30, b=50, l=10, r=10),
-            height=280,
-            showlegend=False,
-            title=dict(text="Repartition par classe", font=dict(size=13, color="#8B92A5"), x=0),
-            yaxis=dict(gridcolor="rgba(255,255,255,0.05)", zeroline=False),
-            xaxis=dict(tickangle=-15, tickfont=dict(size=10)),
-            bargap=0.3,
-        )
         st.plotly_chart(fig_bar, use_container_width=True)
-
     with col2:
-        if total > 0:
-            active_labels = [l for l, v in zip(labels, values) if v > 0]
-            active_values = [v for v in values if v > 0]
-            active_colors = [c for c, v in zip(colors, values) if v > 0]
-            fig_pie = go.Figure(go.Pie(
-                labels=active_labels, values=active_values,
-                hole=0.6,
-                marker=dict(colors=active_colors, line=dict(color="#0E1117", width=2)),
-                textinfo="percent",
-                hovertemplate="<b>%{label}</b><br>%{value} det.<extra></extra>",
-            ))
-            fig_pie.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                font=dict(color="#FAFAFA"),
-                margin=dict(t=30, b=10, l=10, r=10),
-                height=280, showlegend=False,
-                title=dict(text="Distribution", font=dict(size=13, color="#8B92A5"), x=0.1),
-                annotations=[dict(
-                    text=f"<b>{total}</b><br>total",
-                    x=0.5, y=0.5,
-                    font=dict(size=14, color="#FF6B35"),
-                    showarrow=False
-                )]
-            )
+        if fig_pie is not None:
             st.plotly_chart(fig_pie, use_container_width=True)
         else:
             st.info("Aucune detection")
@@ -367,6 +387,7 @@ def show_map(detections, lat, lon, mode="image"):
     tab1, tab2 = st.tabs(["📊 Carte analyse", "📍 Terrain Meknès (réel)"])
 
     with tab1:
+        from streamlit_folium import st_folium  # import lazy : chargé uniquement quand une carte est affichée
         if mode == "image":
             m = generate_image_map(detections, lat, lon)
         else:
@@ -374,11 +395,11 @@ def show_map(detections, lat, lon, mode="image"):
         st_folium(m, width=None, height=380, returned_objects=[])
 
     with tab2:
-        import streamlit.components.v1 as components, os
+        import streamlit.components.v1 as components
         html_path = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
-        if os.path.exists(html_path):
-            with open(html_path, 'r', encoding='utf-8') as f:
-                components.html(f.read(), height=550, scrolling=False)
+        html_content = _load_html_file(html_path)
+        if html_content:
+            components.html(html_content, height=550, scrolling=False)
         else:
             st.warning("⚠️ Place carte_interactive.html dans le même dossier que app.py")
 # ══════════════════════════════════════════════════════════
@@ -909,56 +930,10 @@ def demo_mode(model, confidence):
         annotated_img=bgr_to_rgb(annotated_bgr),
     )
 
-# ═══════════════════════════════════════════════════════
-#  TEST GLOBAL TERRAIN REEL MEKNES
-# ═══════════════════════════════════════════════════════
-st.markdown("---")
-with st.expander("TEST GLOBAL 1 - MEKNES TERRAIN REEL", expanded=False):
-
-    t1, t2, t3 = st.tabs(["Video", "10 Echantillons", "Carte GPS"])
-
-    # ── Tab 1 : Video ──────────────────────────────────
-    with t1:
-        video_path = os.path.join(os.path.dirname(__file__), 'video_demo_meknes.mp4')
-        if os.path.exists(video_path):
-            st.video(video_path)
-        else:
-            st.info("Place video_demo_meknes.mp4 dans le dossier de app.py")
-
-    # ── Tab 2 : Frames annotees ────────────────────────
-    with t2:
-        ann_dir = os.path.join(os.path.dirname(__file__), 'annotated_frames')
-        if os.path.exists(ann_dir):
-            frames = sorted([f for f in os.listdir(ann_dir) if f.endswith('.jpg')])
-            if frames:
-                cols = st.columns(2)
-                for i, fname in enumerate(frames[:10]):
-                    with cols[i % 2]:
-                        st.image(
-                            os.path.join(ann_dir, fname),
-                            caption=fname.replace('ann_', ''),
-                            use_container_width=True
-                        )
-        else:
-            st.info("Place le dossier annotated_frames/ ici")
-
-    # ── Tab 3 : Carte interactive ──────────────────────
-    with t3:
-        import streamlit.components.v1 as components
-        html_path = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
-        if os.path.exists(html_path):
-            with open(html_path, 'r', encoding='utf-8') as f:
-                components.html(f.read(), height=560, scrolling=False)
-        else:
-            st.warning("Place carte_interactive.html dans le dossier de app.py")
-# ══════════════════════════════════════════════════════════
-#  MAIN
-# ══════════════════════════════════════════════════════════
 # ══════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════
 def main():
-    # Titre principal
     st.markdown(
         "<h1 style='color:#E74C3C;margin-bottom:0'>🛣️ RoadScan-MA</h1>"
         "<p style='color:#888;margin-top:0'>Détection automatique des dégradations routières — Meknès</p>",
@@ -968,13 +943,49 @@ def main():
     mode, confidence = render_sidebar()
     model = load_model_cached()
 
-    # Changement de la logique ici :
     if "TEST MEKNES" in mode:
         test_meknes_mode()
     elif "IMAGE" in mode:
         image_mode(model, confidence)
     elif "VIDÉO" in mode:
         video_mode(model, confidence)
+
+    # ── TEST GLOBAL (déplacé ici depuis le niveau module) ──
+    # Ce bloc était exécuté à chaque rerun Streamlit car il était hors de main().
+    st.markdown("---")
+    with st.expander("TEST GLOBAL 1 - MEKNES TERRAIN REEL", expanded=False):
+        _t1, _t2, _t3 = st.tabs(["Video", "10 Echantillons", "Carte GPS"])
+
+        with _t1:
+            _vp = os.path.join(os.path.dirname(__file__), 'video_demo_meknes.mp4')
+            if os.path.exists(_vp):
+                st.video(_vp)
+            else:
+                st.info("Place video_demo_meknes.mp4 dans le dossier de app.py")
+
+        with _t2:
+            _ann = os.path.join(os.path.dirname(__file__), 'annotated_frames')
+            if os.path.exists(_ann):
+                _frames = sorted([f for f in os.listdir(_ann) if f.endswith('.jpg')])
+                if _frames:
+                    _cols = st.columns(2)
+                    for _i, _fn in enumerate(_frames[:10]):
+                        with _cols[_i % 2]:
+                            st.image(os.path.join(_ann, _fn),
+                                     caption=_fn.replace('ann_', ''),
+                                     use_container_width=True)
+            else:
+                st.info("Place le dossier annotated_frames/ ici")
+
+        with _t3:
+            import streamlit.components.v1 as components
+            _hp = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
+            _html = _load_html_file(_hp)
+            if _html:
+                components.html(_html, height=560, scrolling=False)
+            else:
+                st.warning("Place carte_interactive.html dans le dossier de app.py")
+
 
 if __name__ == "__main__":
     main()

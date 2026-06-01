@@ -10,10 +10,13 @@ Wrapper YOLO pour la détection des 5 types de dégradations routières.
     4 → major_pothole    (grand trou)            #E74C3C rouge
 """
 
+from __future__ import annotations  # annotations lazy → YOLO n'a pas besoin d'être importé au niveau module
+
 import cv2
 import numpy as np
 from pathlib import Path
-from ultralytics import YOLO
+# ultralytics est importé en lazy dans load_model() :
+# évite ~3-5 s de délai au démarrage de Streamlit quand le modèle n'est pas encore demandé.
 
 
 # ── Configuration des 5 classes ────────────────────────────
@@ -62,18 +65,16 @@ SEVERITY_WEIGHTS = {
 
 
 # ── Chargement du modèle ───────────────────────────────────
-def load_model(model_path: str = "models/yolo_final_best.pt") -> YOLO:    
-    """Charge le modèle YOLO depuis le fichier .pt.
-    Retourne None si le fichier est introuvable.
-    """
+def load_model(model_path: str = "models/yolo_final_best.pt") -> YOLO:
+    """Charge le modèle YOLO depuis le fichier .pt."""
+    from ultralytics import YOLO  # import lazy : n'exécuté qu'au premier appel
     path = Path(model_path)
     if not path.exists():
         raise FileNotFoundError(
             f"Modèle introuvable : {model_path}\n"
             f"→ Copier best.pt dans le dossier models/"
         )
-    model = YOLO(str(path))
-    return model
+    return YOLO(str(path))
 def apply_clahe(img_bgr):
     lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
