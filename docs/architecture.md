@@ -108,3 +108,26 @@ RoadScan-MA/
 ├── .env.example              # Modèle de configuration
 └── requirements.txt
 ```
+
+## Déploiement Streamlit Cloud
+
+RoadScan-MA est déployé publiquement sur Streamlit Community Cloud :
+
+**URL :** [roadscan-ma.streamlit.app](https://roadscan-ma.streamlit.app)
+
+### Configuration déploiement
+
+| Fichier | Rôle |
+|---|---|
+| `.streamlit/config.toml` | Thème et configuration UI |
+| `requirements.txt` | Dépendances Python |
+| `packages.txt` | Dépendances système (libgl1) |
+| `.python-version` | Version Python (3.11) |
+
+### Variables d'environnement
+
+Sur Streamlit Cloud → Manage App → Settings → Secrets :
+
+```toml
+GROQ_API_KEY = "gsk_votre_cle_ici"
+```

@@ -89,3 +89,24 @@ Le système :
 | > 18 | CRITIQUE 🚨 | Urgence sécurité (< 72h) |
 
 Poids par classe : `linear_crack=1`, `minor_pothole=2`, `alligator_crack=3`, `medium_pothole=4`, `major_pothole=5`
+
+## Upload fichier GPX (Mode Vidéo)
+
+Un fichier GPX optionnel peut être fourni avec la vidéo pour une géolocalisation réelle :
+
+1. Upload la vidéo MP4
+2. Upload le fichier `.gpx` (optionnel)
+3. Si GPX fourni → carte avec vraies coordonnées GPS
+4. Si pas de GPX → message informatif, détections sans carte
+
+## Validation des fichiers
+
+Le système valide automatiquement chaque fichier uploadé :
+
+| Type | Formats acceptés | Taille max |
+|---|---|---|
+| Image | JPG, PNG, BMP, WEBP | 10 MB |
+| Vidéo | MP4, AVI, MOV (H.264) | 500 MB |
+| GPX | .gpx | Illimité |
+
+En cas de fichier invalide, un message d'erreur clair indique la cause.
