@@ -2,6 +2,7 @@
 
 <div align="center">
 
+[![CI](https://github.com/Mohamedaminebelasri/RoadScan-MA/actions/workflows/ci.yml/badge.svg)](https://github.com/Mohamedaminebelasri/RoadScan-MA/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 [![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-streamlit.app-FF4B4B?logo=streamlit)](https://roadscan-ma.streamlit.app)
 ![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-orange?logo=pytorch)
