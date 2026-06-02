@@ -848,6 +848,7 @@ def video_mode(model, confidence):
         st.markdown("#### 📊 Répartition des dégradations")
         show_plotly_chart(summary)
 
+    with col_right:
         # Tableau résumé
         counts = summary.get("counts", {})
         df = pd.DataFrame({
@@ -856,9 +857,16 @@ def video_mode(model, confidence):
         })
         st.dataframe(df, use_container_width=True, hide_index=True)
 
-    with col_right:
-        st.markdown("#### 🗺️ Carte du parcours")
-        show_map(all_detections, 33.8935, -5.5473, mode="video")
+    # Carte pleine largeur — sans l'onglet TEST MEKNES
+    st.markdown("#### 🗺️ Carte du parcours")
+    if all_detections:
+        from streamlit_folium import st_folium
+        st_folium(
+            generate_video_map(all_detections),
+            width=None, height=520, returned_objects=[],
+        )
+    else:
+        st.info("📍 Aucune détection à afficher sur la carte.")
 
     st.divider()
     show_downloads(all_detections, summary, zone="Meknès — Parcours dashcam")
@@ -961,43 +969,6 @@ def main():
         image_mode(model, confidence)
     elif "VIDÉO" in mode:
         video_mode(model, confidence)
-
-    # ── TEST GLOBAL (déplacé ici depuis le niveau module) ──
-    # Ce bloc était exécuté à chaque rerun Streamlit car il était hors de main().
-    st.markdown("---")
-    with st.expander("TEST GLOBAL 1 - MEKNES TERRAIN REEL", expanded=False):
-        _t1, _t2, _t3 = st.tabs(["Video", "10 Echantillons", "Carte GPS"])
-
-        with _t1:
-            _vp = os.path.join(os.path.dirname(__file__), 'video_demo_meknes.mp4')
-            if os.path.exists(_vp):
-                st.video(_vp)
-            else:
-                st.info("Place video_demo_meknes.mp4 dans le dossier de app.py")
-
-        with _t2:
-            _ann = os.path.join(os.path.dirname(__file__), 'annotated_frames')
-            if os.path.exists(_ann):
-                _frames = sorted([f for f in os.listdir(_ann) if f.endswith('.jpg')])
-                if _frames:
-                    _cols = st.columns(2)
-                    for _i, _fn in enumerate(_frames[:10]):
-                        with _cols[_i % 2]:
-                            st.image(os.path.join(_ann, _fn),
-                                     caption=_fn.replace('ann_', ''),
-                                     use_container_width=True)
-            else:
-                st.info("Place le dossier annotated_frames/ ici")
-
-        with _t3:
-            import streamlit.components.v1 as components
-            _hp = os.path.join(os.path.dirname(__file__), 'carte_double_trajectoire.html')
-            _html = _load_html_file(_hp)
-            if _html:
-                components.html(_html, height=560, scrolling=False)
-            else:
-                st.warning("Place carte_interactive.html dans le dossier de app.py")
-
 
 if __name__ == "__main__":
     main()
