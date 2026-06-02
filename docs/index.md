@@ -1,5 +1,9 @@
 # RoadScan-MA
 
+!!! tip "🚀 Application en ligne — accès direct"
+    **[▶ roadscan-ma.streamlit.app](https://roadscan-ma.streamlit.app)**  
+    Accessible directement dans le navigateur — aucune installation requise.
+
 **Détection automatique des dégradations routières avec cartographie GPS et recommandations IA**
 
 ---

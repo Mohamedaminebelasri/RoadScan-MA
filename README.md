@@ -1,5 +1,23 @@
 # 🛣️ RoadScan-MA
 
+---
+
+<div align="center">
+
+### 🚀 Application déployée et accessible en ligne
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://roadscan-ma.streamlit.app)
+
+## 👆 Cliquez ici pour accéder à la démo live
+
+**[▶ roadscan-ma.streamlit.app](https://roadscan-ma.streamlit.app)**
+
+*Aucune installation requise — fonctionne directement dans le navigateur*
+
+</div>
+
+---
+
 <div align="center">
 
 [![CI](https://github.com/Mohamedaminebelasri/RoadScan-MA/actions/workflows/ci.yml/badge.svg)](https://github.com/Mohamedaminebelasri/RoadScan-MA/actions/workflows/ci.yml)
