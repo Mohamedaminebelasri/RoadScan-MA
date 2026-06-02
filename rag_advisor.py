@@ -92,12 +92,15 @@ def generate_recommendations(detections: dict, kb_text: str, api_key: str = "") 
     system_prompt = (
         "Tu es un ingenieur expert en maintenance routiere au Maroc (DRCR). "
         "Genere des rapports professionnels en francais pour les services municipaux. "
+        "L'indice de severite est toujours exprime sur une echelle de 0 a 100. "
         "REGLE ABSOLUE : n'inclus JAMAIS d'estimation budgetaire ni de montants en MAD."
     )
 
+    score_100 = min(severity['score'] * 4, 100)
+
     user_prompt = (
         f"DEGRADATIONS DETECTEES :\n{det_summary}\n\n"
-        f"SEVERITE : {severity['level']} (score {severity['score']}/25)\n\n"
+        f"SEVERITE : {severity['level']} (indice {score_100}/100)\n\n"
         f"REFERENTIEL TECHNIQUE :\n{kb_text[:1800]}\n\n"
         "Genere un rapport structure avec ces sections uniquement :\n"
         "## Diagnostic\n"
@@ -139,9 +142,10 @@ def _fallback(detections: dict, severity_info: dict) -> str:
     if severity_info["score"] == 0:
         return "### Bilan\nAucune anomalie constatee. Maintenir le cycle de surveillance habituel."
 
+    score_100 = min(severity_info['score'] * 4, 100)
     report = [
         "*(Genere hors-ligne)*\n",
-        f"## Diagnostic (Score Severite : {severity_info['score']}/25)",
+        f"## Diagnostic (Indice de severite : {score_100}/100)",
         f"## Niveau d'urgence : {severity_info['urgency']}\n",
         "## Interventions recommandees"
     ]
