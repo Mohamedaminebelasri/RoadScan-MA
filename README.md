@@ -102,6 +102,67 @@ major_pothole     →  Grand nid-de-poule   > 10 cm  (poids sévérité : 5)
 
 ---
 
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/test_meknes_map.png" 
+           width="100%" 
+           alt="Carte GPS Interactive Meknès"/>
+      <br/><b>🗺️ Carte GPS Interactive — Meknès</b>
+      <br/><sub>126 dégradations géolocalisées sur le réseau 
+      routier de Meknès, colorées par classe et sévérité</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/video_map.png" 
+           width="100%" 
+           alt="Carte GPS avec popup et layers"/>
+      <br/><b>📍 Carte GPS — Popup & Multi-layers</b>
+      <br/><sub>Synchronisation GPS/vidéo au frame près, 
+      4 fonds de carte, couche de chaleur disponible</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/mode_image.png" 
+           width="100%" 
+           alt="Détection YOLOv8 sur image"/>
+      <br/><b>🔍 Détection YOLOv8 — Mode Image</b>
+      <br/><sub>Nid-de-poule majeur détecté à 84% de confiance 
+      avec statistiques par classe en temps réel</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/video_results.png" 
+           width="100%" 
+           alt="Dashboard résultats vidéo"/>
+      <br/><b>📊 Dashboard Résultats — Mode Vidéo</b>
+      <br/><sub>54 détections, GPX synchronisé (484 points), 
+      indice de sévérité et répartition par classe</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="50%">
+      <img src="assets/test_meknes_detections.png" 
+           width="100%" 
+           alt="Échantillons annotés Meknès"/>
+      <br/><b>🎯 Échantillons Annotés — Rues de Meknès</b>
+      <br/><sub>Détections YOLOv8 sur images réelles collectées 
+      à Meknès, avec preprocessing CLAHE</sub>
+    </td>
+    <td align="center" width="50%">
+      <img src="assets/rag_advisor.png" 
+           width="100%" 
+           alt="RAG Advisor Llama-3.1"/>
+      <br/><b>🤖 RAG Advisor — Llama-3.1 via Groq</b>
+      <br/><sub>Rapport de diagnostic municipal généré par IA 
+      avec niveaux d'urgence et délais d'intervention</sub>
+    </td>
+  </tr>
+</table>
+
+---
+
 ## ⚙️ Installation
 
 ### Prérequis
